@@ -10,7 +10,7 @@ import database as db
 
 # Инициализация бота
 bot = Bot(token=BOT_TOKEN)
-dp = Dispatcher()
+dp = Dispatcher() 
 
 # ==================== СОСТОЯНИЯ (FSM) ====================
 
