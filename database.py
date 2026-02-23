@@ -1,14 +1,13 @@
 import sqlite3
 import json
 from typing import Optional, Dict, List
-from config import DATABASE_URL
+
+# Используем локальный SQLite файл
+DB_NAME = "eldron.db"
 
 def get_connection():
     """Создаёт подключение к базе данных"""
-    if DATABASE_URL.startswith("sqlite"):
-        return sqlite3.connect("eldron.db", check_same_thread=False)
-    # Для PostgreSQL на Railway (расширенная версия)
-    return sqlite3.connect("eldron.db", check_same_thread=False)
+    return sqlite3.connect(DB_NAME, check_same_thread=False)
 
 def init_db():
     """Создаёт таблицы при первом запуске"""
@@ -41,9 +40,9 @@ def init_db():
             phys_def INTEGER DEFAULT 3,
             magic_def INTEGER DEFAULT 3,
             magic_atk INTEGER DEFAULT 10,
-            equipment JSON DEFAULT '{}',
-            inventory JSON DEFAULT '{}',
-            spells JSON DEFAULT '[]',
+            equipment TEXT DEFAULT '{}',
+            inventory TEXT DEFAULT '{}',
+            spells TEXT DEFAULT '[]',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
@@ -90,14 +89,14 @@ def create_player(user_id: int, username: str, name: str, race: str, class_type:
     bonuses = {"strength": 0, "vitality": 0, "agility": 0, "intelligence": 0, "skill_points": 0}
     for key in race_bonuses.get(race, {}):
         if key in bonuses:
-            bonuses[key] += race_bonuses[race][key]
+            bonuses[key] += race_bonuses[race].get(key, 0)
     for key in class_bonuses.get(class_type, {}):
         if key in bonuses:
-            bonuses[key] += class_bonuses[class_type][key]
+            bonuses[key] += class_bonuses[class_type].get(key, 0)
     
     # Рассчитываем боевые характеристики
     phys_atk = 5 + bonuses["strength"] * 4
-    stealth_atk = 10 + bonuses["agility"] * 8 + bonuses["agility"] * 3  # +8 Скр.АТК, +3 Укл
+    stealth_atk = 10 + bonuses["agility"] * 8 + bonuses["agility"] * 3
     evasion = 8 + bonuses["agility"] * 3
     phys_def = 3 + bonuses["vitality"]
     magic_def = 3 + bonuses["vitality"]
@@ -136,9 +135,9 @@ def get_player(user_id: int) -> Optional[Dict]:
     
     if row:
         player = dict(row)
-        player["equipment"] = json.loads(player["equipment"])
-        player["inventory"] = json.loads(player["inventory"])
-        player["spells"] = json.loads(player["spells"])
+        player["equipment"] = json.loads(player["equipment"] or "{}")
+        player["inventory"] = json.loads(player["inventory"] or "{}")
+        player["spells"] = json.loads(player["spells"] or "[]")
         return player
     return None
 
@@ -148,6 +147,12 @@ def update_player(user_id: int, **kwargs):
         return
     conn = get_connection()
     cursor = conn.cursor()
+    
+    # Обрабатываем JSON-поля
+    json_fields = ["equipment", "inventory", "spells"]
+    for field in json_fields:
+        if field in kwargs and isinstance(kwargs[field], (dict, list)):
+            kwargs[field] = json.dumps(kwargs[field])
     
     set_clause = ", ".join([f"{k} = ?" for k in kwargs.keys()])
     values = list(kwargs.values()) + [user_id]
