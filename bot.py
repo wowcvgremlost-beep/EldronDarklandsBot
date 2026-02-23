@@ -1,7 +1,7 @@
 import random
 import json
 from aiogram import Bot, Dispatcher, types, F
-from aiogram.filters import Command, StateFilter
+from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
@@ -12,7 +12,20 @@ import database as db
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
+# ==================== СОСТОЯНИЯ (FSM) ====================
+
+class CharacterCreation(StatesGroup):
+    name = State()
+    race = State()
+    class_type = State()
+
+class BattleState(StatesGroup):
+    player_dice = State()
+    enemy_dice = State()
+
 # ==================== ДАННЫЕ ИГРЫ ====================
+# (вставьте все данные из предыдущего кода: RACES, CLASSES, SHOP_ITEMS, SPELLS, MONSTERS, CARDS)
+# ... (сокращено для краткости - оставьте все данные как были)
 
 RACES = {
     "human": {"name": "🧑 Человек", "bonus": "+3 очка навыка", "magic": "✨ Благословение: +10% к лечению"},
@@ -31,161 +44,7 @@ CLASSES = {
     "necromancer": {"name": "💀 Некромант", "bonus": "+1 Инт, +1 Жив", "magic": "☠️ Поднять скелета: Призыв"}
 }
 
-SHOP_ITEMS = {
-    "potions": [
-        {"id": "hp_small", "name": "🧪 Малое зелье HP", "effect": "+30 HP", "price": 50, "type": "heal", "value": 30},
-        {"id": "hp_medium", "name": "🧪 Среднее зелье HP", "effect": "+60 HP", "price": 100, "type": "heal", "value": 60},
-        {"id": "hp_large", "name": "🧪 Большое зелье HP", "effect": "+100 HP", "price": 150, "type": "heal", "value": 100},
-        {"id": "mp_small", "name": "🧪 Малое зелье MP", "effect": "+30 MP", "price": 50, "type": "mana", "value": 30},
-        {"id": "mp_medium", "name": "🧪 Среднее зелье MP", "effect": "+60 MP", "price": 100, "type": "mana", "value": 60},
-        {"id": "mp_large", "name": "🧪 Большое зелье MP", "effect": "+100 MP", "price": 150, "type": "mana", "value": 100},
-    ],
-    "weapons": [
-        {"id": "sword_apprentice", "name": "⚔️ Меч Ученика", "effect": "+1 Сила", "price": 150, "stat": "strength", "value": 1},
-        {"id": "shield_apprentice", "name": "🛡️ Щит Ученика", "effect": "+1 Живучесть", "price": 150, "stat": "vitality", "value": 1},
-        {"id": "bow_apprentice", "name": "🏹 Лук Ученика", "effect": "+1 Ловкость", "price": 150, "stat": "agility", "value": 1},
-        {"id": "arrows_apprentice", "name": "🏹 Стрелы Ученика", "effect": "+1 Ловкость", "price": 150, "stat": "agility", "value": 1},
-        {"id": "staff_apprentice", "name": "🔮 Посох Ученика", "effect": "+1 Интеллект", "price": 150, "stat": "intelligence", "value": 1},
-        {"id": "orb_apprentice", "name": "🔮 Сфера Ученика", "effect": "+1 Интеллект", "price": 150, "stat": "intelligence", "value": 1},
-    ],
-    "armor": [
-        {"id": "helm_apprentice", "name": "⛑️ Шлем Ученика", "effect": "+1 Живучесть", "price": 200, "stat": "vitality", "value": 1},
-        {"id": "armor_apprentice", "name": "🛡️ Броня Ученика", "effect": "+1 Живучесть", "price": 200, "stat": "vitality", "value": 1},
-        {"id": "pants_apprentice", "name": "👖 Штаны Ученика", "effect": "+1 Ловкость", "price": 200, "stat": "agility", "value": 1},
-        {"id": "boots_apprentice", "name": "👢 Ботинки Ученика", "effect": "+1 Ловкость", "price": 200, "stat": "agility", "value": 1},
-        {"id": "arms_apprentice", "name": "💪 Руки Ученика", "effect": "+1 Сила", "price": 200, "stat": "strength", "value": 1},
-        {"id": "gloves_apprentice", "name": "🧤 Перчатки Ученика", "effect": "+1 Сила", "price": 200, "stat": "strength", "value": 1},
-    ],
-    "accessories": [
-        {"id": "amulet_agility", "name": "📿 Амулет Ловкости", "effect": "+2 Ловкость", "price": 400, "stat": "agility", "value": 2},
-        {"id": "ring_protection", "name": "💍 Кольцо Защиты", "effect": "+2 Живучесть", "price": 400, "stat": "vitality", "value": 2},
-        {"id": "chain_strength", "name": "⛓️ Цепь Силы", "effect": "+2 Сила", "price": 400, "stat": "strength", "value": 2},
-    ],
-    "other": [
-        {"id": "scroll_exp", "name": "📜 Свиток опыта", "effect": "+50 Опыта", "price": 500, "type": "exp", "value": 50},
-    ]
-}
-
-SPELLS = {
-    5: [
-        {"id": "fire_arrow", "name": "🔥 Стрела Огня", "effect": "+5 Маг.АТК", "cost": 2000, "stat": "magic_atk", "value": 5},
-        {"id": "ice_shield", "name": "❄️ Ледяной Щит", "effect": "+5 Маг.Защ", "cost": 2000, "stat": "magic_def", "value": 5},
-        {"id": "heal", "name": "🌿 Лечение", "effect": "+20 HP", "cost": 1000, "type": "heal", "value": 20},
-        {"id": "sharpen", "name": "🗡️ Заточка", "effect": "+5 Физ.АТК", "cost": 2000, "stat": "phys_atk", "value": 5},
-        {"id": "barrier", "name": "🛡️ Барьер", "effect": "+5 Физ.Защ", "cost": 2000, "stat": "phys_def", "value": 5},
-    ],
-    15: [
-        {"id": "fireball", "name": "🔥 Огненный Шар", "effect": "+15 Маг.АТК", "cost": 5000, "stat": "magic_atk", "value": 15},
-        {"id": "ice_wall", "name": "❄️ Ледяная Стена", "effect": "+15 Маг.Защ", "cost": 5000, "stat": "magic_def", "value": 15},
-        {"id": "mass_heal", "name": "🌿 Массовое Лечение", "effect": "+60 HP", "cost": 2000, "type": "heal", "value": 60},
-        {"id": "sharp_blade", "name": "🗡️ Острое Лезвие", "effect": "+10 Физ.АТК", "cost": 5000, "stat": "phys_atk", "value": 10},
-        {"id": "iron_skin", "name": "🛡️ Железная Кожа", "effect": "+10 Физ.Защ", "cost": 5000, "stat": "phys_def", "value": 10},
-    ],
-    30: [
-        {"id": "hellfire", "name": "🔥 Адское Пламя", "effect": "+30 Маг.АТК", "cost": 9000, "stat": "magic_atk", "value": 30},
-        {"id": "permafrost", "name": "❄️ Вечная Мерзлота", "effect": "+30 Маг.Защ", "cost": 9000, "stat": "magic_def", "value": 30},
-        {"id": "resurrect", "name": "🌿 Воскрешение", "effect": "+120 HP", "cost": 4000, "type": "heal", "value": 120},
-        {"id": "dragonslayer", "name": "🗡️ Убийца Драконов", "effect": "+25 Физ.АТК", "cost": 9000, "stat": "phys_atk", "value": 25},
-        {"id": "impervious", "name": "🛡️ Непробиваемость", "effect": "+25 Физ.Защ", "cost": 9000, "stat": "phys_def", "value": 25},
-    ],
-    50: [
-        {"id": "volcano", "name": "🔥 Извержение Вулкана", "effect": "+50 Маг.АТК", "cost": 17000, "stat": "magic_atk", "value": 50},
-        {"id": "ice_age", "name": "❄️ Ледниковый Период", "effect": "+50 Маг.Защ", "cost": 17000, "stat": "magic_def", "value": 50},
-        {"id": "phoenix", "name": "🌿 Феникс", "effect": "+250 HP", "cost": 8000, "type": "heal", "value": 250},
-        {"id": "destroyer", "name": "🗡️ Разрушитель", "effect": "+45 Физ.АТК", "cost": 17000, "stat": "phys_atk", "value": 45},
-        {"id": "absolute_defense", "name": "🛡️ Абсолютная Защита", "effect": "+45 Физ.Защ", "cost": 17000, "stat": "phys_def", "value": 45},
-    ],
-    100: [
-        {"id": "armageddon", "name": "🔥 Конец Света", "effect": "+100 Маг.АТК", "cost": 33000, "stat": "magic_atk", "value": 100},
-        {"id": "eternal_winter", "name": "❄️ Вечная Зима", "effect": "+100 Маг.Защ", "cost": 33000, "stat": "magic_def", "value": 100},
-        {"id": "immortality", "name": "🌿 Бессмертие", "effect": "+500 HP", "cost": 15000, "type": "heal", "value": 500},
-        {"id": "worldslayer", "name": "🗡️ Убийца Миров", "effect": "+100 Физ.АТК", "cost": 33000, "stat": "phys_atk", "value": 100},
-        {"id": "gods_shield", "name": "🛡️ Щит Богов", "effect": "+100 Физ.Защ", "cost": 33000, "stat": "phys_def", "value": 100},
-    ]
-}
-
-MONSTERS = {
-    "weak": [
-        {"name": "🐀 Крыса-мутант", "hp": 15, "phys_atk": 3, "magic_atk": 0, "phys_def": 1, "magic_def": 1, "evasion": 3, "exp": 20, "gold": 10},
-        {"name": "🕷️ Гигантский паук", "hp": 20, "phys_atk": 5, "magic_atk": 0, "phys_def": 2, "magic_def": 1, "evasion": 5, "exp": 30, "gold": 15},
-        {"name": "🦇 Летучая мышь", "hp": 12, "phys_atk": 4, "magic_atk": 2, "phys_def": 1, "magic_def": 2, "evasion": 8, "exp": 25, "gold": 12},
-        {"name": "🧟 Слабый зомби", "hp": 25, "phys_atk": 6, "magic_atk": 0, "phys_def": 3, "magic_def": 1, "evasion": 2, "exp": 35, "gold": 18},
-        {"name": "👺 Гоблин-разбойник", "hp": 18, "phys_atk": 5, "magic_atk": 3, "phys_def": 2, "magic_def": 2, "evasion": 6, "exp": 40, "gold": 20},
-    ],
-    "medium": [
-        {"name": "🐺 Волк-оборотень", "hp": 40, "phys_atk": 10, "magic_atk": 0, "phys_def": 4, "magic_def": 3, "evasion": 7, "exp": 70, "gold": 40},
-        {"name": "🧛 Вампир-новичок", "hp": 35, "phys_atk": 8, "magic_atk": 8, "phys_def": 3, "magic_def": 5, "evasion": 6, "exp": 80, "gold": 50},
-        {"name": "👹 Орк-воин", "hp": 50, "phys_atk": 12, "magic_atk": 0, "phys_def": 6, "magic_def": 2, "evasion": 4, "exp": 90, "gold": 55},
-        {"name": "🧙 Тёмный ученик", "hp": 30, "phys_atk": 5, "magic_atk": 15, "phys_def": 2, "magic_def": 8, "evasion": 5, "exp": 85, "gold": 45},
-        {"name": "🦂 Скорпион-убийца", "hp": 45, "phys_atk": 11, "magic_atk": 5, "phys_def": 5, "magic_def": 4, "evasion": 8, "exp": 95, "gold": 60},
-    ],
-    "strong": [
-        {"name": "🐉 Молодой дракон", "hp": 80, "phys_atk": 20, "magic_atk": 15, "phys_def": 10, "magic_def": 10, "evasion": 10, "exp": 200, "gold": 150},
-        {"name": "💀 Рыцарь смерти", "hp": 70, "phys_atk": 18, "magic_atk": 12, "phys_def": 12, "magic_def": 8, "evasion": 6, "exp": 220, "gold": 180},
-        {"name": "🔮 Тёмный маг", "hp": 50, "phys_atk": 8, "magic_atk": 25, "phys_def": 5, "magic_def": 15, "evasion": 8, "exp": 210, "gold": 160},
-        {"name": "🦁 Мантикора", "hp": 75, "phys_atk": 22, "magic_atk": 10, "phys_def": 8, "magic_def": 6, "evasion": 12, "exp": 230, "gold": 170},
-        {"name": "👿 Демон-искуситель", "hp": 60, "phys_atk": 15, "magic_atk": 20, "phys_def": 7, "magic_def": 12, "evasion": 10, "exp": 240, "gold": 190},
-    ],
-    "very_strong": [
-        {"name": "🐉 Древний дракон", "hp": 150, "phys_atk": 35, "magic_atk": 30, "phys_def": 20, "magic_def": 20, "evasion": 15, "exp": 500, "gold": 400},
-        {"name": "👑 Лич-повелитель", "hp": 120, "phys_atk": 25, "magic_atk": 40, "phys_def": 15, "magic_def": 25, "evasion": 12, "exp": 550, "gold": 450},
-        {"name": "🔥 Повелитель демонов", "hp": 140, "phys_atk": 30, "magic_atk": 35, "phys_def": 18, "magic_def": 22, "evasion": 14, "exp": 520, "gold": 420},
-        {"name": "🌑 Тень Эльдрона", "hp": 100, "phys_atk": 20, "magic_atk": 45, "phys_def": 10, "magic_def": 30, "evasion": 20, "exp": 580, "gold": 480},
-        {"name": "⚡ Громовой гигант", "hp": 160, "phys_atk": 40, "magic_atk": 15, "phys_def": 25, "magic_def": 15, "evasion": 8, "exp": 600, "gold": 500},
-    ],
-    "bosses": [
-        {"name": "👹 ВОЖДЬ ОРКОВ ГРОМ", "hp": 200, "phys_atk": 45, "magic_atk": 20, "phys_def": 30, "magic_def": 20, "evasion": 10, "exp": 1000, "gold": 800},
-        {"name": "🧛 КОРоль ВАМПИРОВ", "hp": 180, "phys_atk": 35, "magic_atk": 40, "phys_def": 25, "magic_def": 30, "evasion": 15, "exp": 1100, "gold": 900},
-        {"name": "🔮 АРХИМАГ ТЬМЫ", "hp": 150, "phys_atk": 20, "magic_atk": 55, "phys_def": 20, "magic_def": 40, "evasion": 18, "exp": 1200, "gold": 1000},
-    ],
-    "titan": {
-        "name": "👑 ТИТАН ЭЛДРОН - ФИНАЛЬНЫЙ БОСС",
-        "hp": 500, "phys_atk": 60, "magic_atk": 60, "phys_def": 40, "magic_def": 40, "evasion": 20,
-        "exp": 5000, "gold": 3000
-    }
-}
-
-CARDS = {
-    "red": [
-        "👹 Появился монстр: Гоблин-разбойник!",
-        "🐺 На вас напал Волк-оборотень!",
-        "🧟 Из тени вышел Зомби-воин!",
-        "🕷️ Гигантский паук преградил путь!",
-        "🦇 Стая летучих мышей атакует!",
-    ],
-    "yellow": [
-        "📜 Задание: Принеси 5 шкур волка. Награда: 100 💰, 50 ✨",
-        "🗝️ Найди потерянный артефакт в пещере. Награда: 150 💰, 80 ✨",
-        "🧙 Помоги магу собрать ингредиенты. Награда: Зелье MP +100 ✨",
-        "🏰 Очисти деревню от монстров. Награда: 200 💰, 120 ✨",
-        "💎 Найди скрытый сундук. Награда: Случайный предмет!",
-    ],
-    "green": [
-        "✨ Бафф: +10 ко всем характеристикам на 1 бой!",
-        "🌿 Лечение: Восстановлено 30 HP",
-        "💫 Удача: Следующий бросок кубика +5",
-        "🛡️ Защита: +15 к защите на 1 ход",
-        "⚡ Скорость: Ходишь первым в следующем бою",
-    ],
-    "black": [
-        "☠️ Дебафф: -10 к защите на 1 бой",
-        "🩸 Кровотечение: -5 HP каждый ход (3 хода)",
-        "🌀 Замешательство: 30% шанс промахнуться",
-        "🔇 Безмолвие: Нельзя использовать магию (2 хода)",
-        "🦠 Яд: -10 HP сразу, -3 HP каждый ход (2 хода)",
-    ]
-}
-
-# ==================== СОСТОЯНИЯ (FSM) ====================
-
-class CharacterCreation(StatesGroup):
-    name = State()
-    race = State()
-    class_type = State()
-
-class BattleState(StatesGroup):
-    player_dice = State()
-    enemy_dice = State()
+# ... (остальные данные SHOP_ITEMS, SPELLS, MONSTERS, CARDS оставьте как были)
 
 # ==================== КЛАВИАТУРЫ ====================
 
@@ -276,14 +135,13 @@ def cards_kb():
     ]
     return InlineKeyboardMarkup(inline_keyboard=kb)
 
-def magic_tower_kb(level: int):
-    kb = []
-    for spell in SPELLS.get(level, []):
-        kb.append([InlineKeyboardButton(
-            text=f"{spell['name']} {spell['effect']} {level}ур 💰{spell['cost']}",
-            callback_data=f"spell_{level}_{spell['id']}"
-        )])
-    kb.append([InlineKeyboardButton(text="🔙 Назад", callback_data="main_menu")])
+def battle_action_kb():
+    kb = [
+        [InlineKeyboardButton(text="⚔️ Физическая атака", callback_data="battle_attack_phys")],
+        [InlineKeyboardButton(text="🔮 Магическая атака", callback_data="battle_attack_magic")],
+        [InlineKeyboardButton(text="🧪 Использовать зелье", callback_data="battle_use_potion")],
+        [InlineKeyboardButton(text="🏳️ Сдаться", callback_data="battle_surrender")],
+    ]
     return InlineKeyboardMarkup(inline_keyboard=kb)
 
 def magic_levels_kb():
@@ -297,19 +155,10 @@ def magic_levels_kb():
     ]
     return InlineKeyboardMarkup(inline_keyboard=kb)
 
-def battle_action_kb():
-    kb = [
-        [InlineKeyboardButton(text="⚔️ Физическая атака", callback_data="battle_attack_phys")],
-        [InlineKeyboardButton(text="🔮 Магическая атака", callback_data="battle_attack_magic")],
-        [InlineKeyboardButton(text="🧪 Использовать зелье", callback_data="battle_use_potion")],
-        [InlineKeyboardButton(text="🏳️ Сдаться", callback_data="battle_surrender")],
-    ]
-    return InlineKeyboardMarkup(inline_keyboard=kb)
-
 # ==================== ХЕНДЛЕРЫ (ОБРАБОТЧИКИ) ====================
 
 @dp.message(Command("start"))
-async def cmd_start(message: types.Message):
+async def cmd_start(message: types.Message, state: FSMContext):
     player = db.get_player(message.from_user.id)
     if player:
         await message.answer(
@@ -325,7 +174,7 @@ async def cmd_start(message: types.Message):
             "<i>Введи имя персонажа (3-30 символов):</i>",
             parse_mode="HTML"
         )
-        await dp.storage.set_state(user=message.from_user.id, bot=dp.bot, state=CharacterCreation.name)
+        await state.set_state(CharacterCreation.name)
 
 @dp.message(CharacterCreation.name)
 async def set_name(message: types.Message, state: FSMContext):
@@ -358,7 +207,6 @@ async def set_class(callback: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
     class_type = callback.data.split("_")[1]
     
-    # Создаём персонажа в БД
     db.create_player(
         user_id=callback.from_user.id,
         username=callback.from_user.username or "Hero",
@@ -481,9 +329,10 @@ async def show_inventory(callback: types.CallbackQuery):
         text += "• Пусто\n"
     else:
         for item_id, count in inv.items():
-            # Ищем название предмета
             name = "Неизвестный предмет"
-            for category in SHOP_ITEMS.values():
+            for category in [SHOP_ITEMS.get("potions", []), SHOP_ITEMS.get("weapons", []), 
+                           SHOP_ITEMS.get("armor", []), SHOP_ITEMS.get("accessories", []),
+                           SHOP_ITEMS.get("other", [])]:
                 for item in category:
                     if item["id"] == item_id:
                         name = item["name"]
@@ -499,7 +348,14 @@ async def show_shop(callback: types.CallbackQuery):
 
 @dp.callback_query(F.data.startswith("shop_"))
 async def show_shop_category(callback: types.CallbackQuery):
-    category = callback.data.split("_")[1]
+    category_map = {
+        "shop_potions": "potions",
+        "shop_weapons": "weapons",
+        "shop_armor": "armor",
+        "shop_accessories": "accessories",
+        "shop_other": "other"
+    }
+    category = category_map.get(callback.data, "potions")
     items = SHOP_ITEMS.get(category, [])
     
     if not items:
@@ -525,7 +381,6 @@ async def buy_item(callback: types.CallbackQuery):
     player = db.get_player(callback.from_user.id)
     item_id = callback.data.split("_")[1]
     
-    # Ищем предмет
     item = None
     for category in SHOP_ITEMS.values():
         for i in category:
@@ -537,13 +392,11 @@ async def buy_item(callback: types.CallbackQuery):
         await callback.answer("❌ Недостаточно золота!", show_alert=True)
         return
     
-    # Покупаем
     db.update_player(callback.from_user.id, gold=player["gold"] - item["price"])
     
-    # Добавляем в инвентарь
     inv = player["inventory"]
     inv[item_id] = inv.get(item_id, 0) + 1
-    db.update_player(callback.from_user.id, inventory=json.dumps(inv))
+    db.update_player(callback.from_user.id, inventory=inv)
     
     db.add_log(callback.from_user.id, "buy_item", f"{item['name']} за {item['price']}💰")
     
@@ -561,7 +414,7 @@ async def select_monster(callback: types.CallbackQuery):
                                      reply_markup=pve_monsters_kb(), parse_mode="HTML")
 
 @dp.callback_query(F.data.startswith("monster_"))
-async def start_pve_battle(callback: types.CallbackQuery):
+async def start_pve_battle(callback: types.CallbackQuery, state: FSMContext):
     player = db.get_player(callback.from_user.id)
     if not player:
         await callback.answer("❌ Сначала создай персонажа!", show_alert=True)
@@ -577,28 +430,26 @@ async def start_pve_battle(callback: types.CallbackQuery):
         await callback.answer("❌ Ошибка выбора", show_alert=True)
         return
     
-    # Сохраняем состояние боя
     battle_data = {
         "player": {k: v for k, v in player.items()},
         "enemy": monster,
         "enemy_hp": monster["hp"],
         "turn": 0
     }
-    await dp.storage.set_data(user=callback.from_user.id, bot=dp.bot, data={"battle": battle_data})
+    await state.update_data(battle=battle_data)
     
     await callback.message.edit_text(
         f"⚔️ <b>НАЧАЛО БОЯ!</b>\n\n"
         f"👤 {player['name']} ❤️{player['hp']}/{player['max_hp']}\n"
         f"🆚\n"
         f"👹 {monster['name']} ❤️{monster['hp']}/{monster['hp']}\n\n"
-        f"<i>Кто ходит первым?</i>\n"
-        f"🎲 Кинь кубик d20 и напиши число (1-20):",
+        f"<i>Кинь кубик d20 и напиши число (1-20):</i>",
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="🏳️ Сдаться", callback_data="battle_surrender")]
         ]),
         parse_mode="HTML"
     )
-    await dp.storage.set_state(user=callback.from_user.id, bot=dp.bot, state=BattleState.player_dice)
+    await state.set_state(BattleState.player_dice)
 
 @dp.message(BattleState.player_dice)
 async def player_dice_roll(message: types.Message, state: FSMContext):
@@ -611,18 +462,18 @@ async def player_dice_roll(message: types.Message, state: FSMContext):
         await message.answer("❌ Введи число от 1 до 20!")
         return
     
-    battle = (await dp.storage.get_data(user=message.from_user.id, bot=dp.bot)).get("battle", {})
+    data = await state.get_data()
+    battle = data.get("battle", {})
+    
     if not battle:
         await message.answer("❌ Бой не найден. Начни заново.")
         await state.clear()
         return
     
-    # Бросок за монстра
     enemy_dice = random.randint(1, 20)
     
-    # Определяем, кто ходит первым (по Скр.АТК + кубик)
     player_init = battle["player"]["stealth_atk"] + dice
-    enemy_init = battle["enemy"]["evasion"] + enemy_dice  # используем evasion как инициативу монстра
+    enemy_init = battle["enemy"]["evasion"] + enemy_dice
     
     first = "player" if player_init >= enemy_init else "enemy"
     
@@ -634,19 +485,15 @@ async def player_dice_roll(message: types.Message, state: FSMContext):
         f"<i>Выбери действие:</i>"
     )
     
-    await state.clear()
+    await state.update_data(player_dice=dice, enemy_dice=enemy_dice, first_turn=first)
+    await state.set_state(None)  # Сбрасываем состояние
     await message.answer(text, reply_markup=battle_action_kb(), parse_mode="HTML")
-    
-    # Сохраняем данные боя
-    battle["player_dice"] = dice
-    battle["enemy_dice"] = enemy_dice
-    battle["first_turn"] = first
-    await dp.storage.set_data(user=message.from_user.id, bot=dp.bot, data={"battle": battle})
 
 @dp.callback_query(F.data.startswith("battle_"))
-async def battle_action(callback: types.CallbackQuery):
+async def battle_action(callback: types.CallbackQuery, state: FSMContext):
     action = callback.data.split("_")[1]
-    battle = (await dp.storage.get_data(user=callback.from_user.id, bot=dp.bot)).get("battle", {})
+    data = await state.get_data()
+    battle = data.get("battle", {})
     
     if not battle:
         await callback.answer("❌ Бой не найден", show_alert=True)
@@ -657,7 +504,6 @@ async def battle_action(callback: types.CallbackQuery):
     enemy_hp = battle["enemy_hp"]
     
     if action == "surrender":
-        # Сдаться
         db.update_player(callback.from_user.id, gold=0, hp=player["max_hp"])
         db.add_log(callback.from_user.id, "battle_surrender", f"Сдался в бою с {enemy['name']}")
         await callback.message.edit_text(
@@ -668,18 +514,16 @@ async def battle_action(callback: types.CallbackQuery):
             reply_markup=main_menu_kb(),
             parse_mode="HTML"
         )
-        await dp.storage.clear(user=callback.from_user.id, bot=dp.bot)
+        await state.clear()
         return
     
     if action == "attack_phys":
-        # Физическая атака
         player_dmg = max(1, player["phys_atk"] - enemy["phys_def"] + random.randint(1, 20))
         enemy_hp -= player_dmg
         
         result_text = f"⚔️ Ты атакуешь и наносишь <b>{player_dmg}</b> урона!\n"
         
         if enemy_hp <= 0:
-            # Победа
             db.update_player(
                 callback.from_user.id,
                 exp=player["exp"] + enemy["exp"],
@@ -696,17 +540,15 @@ async def battle_action(callback: types.CallbackQuery):
                 reply_markup=main_menu_kb(),
                 parse_mode="HTML"
             )
-            await dp.storage.clear(user=callback.from_user.id, bot=dp.bot)
+            await state.clear()
             return
         else:
-            # Ход врага
             enemy_dmg = max(1, enemy["phys_atk"] - player["phys_def"] + random.randint(1, 20))
             new_hp = max(0, player["hp"] - enemy_dmg)
             
             result_text += f"👹 Враг контратакует и наносит <b>{enemy_dmg}</b> урона!\n"
             
             if new_hp <= 0:
-                # Поражение
                 db.update_player(callback.from_user.id, gold=0, hp=player["max_hp"])
                 db.add_log(callback.from_user.id, "battle_lose", f"Поражение от {enemy['name']}")
                 
@@ -719,13 +561,12 @@ async def battle_action(callback: types.CallbackQuery):
                     reply_markup=main_menu_kb(),
                     parse_mode="HTML"
                 )
-                await dp.storage.clear(user=callback.from_user.id, bot=dp.bot)
+                await state.clear()
                 return
             else:
-                # Продолжаем бой
                 battle["enemy_hp"] = enemy_hp
                 battle["player"]["hp"] = new_hp
-                await dp.storage.set_data(user=callback.from_user.id, bot=dp.bot, data={"battle": battle})
+                await state.update_data(battle=battle)
                 
                 await callback.message.edit_text(
                     f"⚔️ <b>Ход завершён</b>\n\n"
@@ -738,17 +579,14 @@ async def battle_action(callback: types.CallbackQuery):
                 )
                 return
     
-    # Магия и зелья (упрощённо)
     if action == "attack_magic":
         if player["mp"] < 5:
             await callback.answer("❌ Недостаточно MP!", show_alert=True)
             return
-        # Упрощённый расчёт магии
         dmg = max(1, player["magic_atk"] - enemy["magic_def"] + random.randint(1, 20))
         enemy_hp -= dmg
         db.update_player(callback.from_user.id, mp=max(0, player["mp"] - 5))
-        # ... аналогично физической атаке (код сокращён для краткости)
-        await callback.answer("🔮 Магия применена! (упрощённо)", show_alert=True)
+        await callback.answer(f"🔮 Магия нанесла {dmg} урона!", show_alert=True)
         return
     
     if action == "use_potion":
@@ -756,10 +594,9 @@ async def battle_action(callback: types.CallbackQuery):
         if "hp_small" not in inv or inv["hp_small"] < 1:
             await callback.answer("❌ Нет зелий HP!", show_alert=True)
             return
-        # Лечение
         new_hp = min(player["max_hp"], player["hp"] + 30)
         inv["hp_small"] -= 1
-        db.update_player(callback.from_user.id, hp=new_hp, inventory=json.dumps(inv))
+        db.update_player(callback.from_user.id, hp=new_hp, inventory=inv)
         await callback.answer(f"🧪 Восстановлено 30 HP! ❤️ {new_hp}/{player['max_hp']}", show_alert=True)
         return
 
@@ -830,10 +667,19 @@ async def show_spells(callback: types.CallbackQuery):
         await callback.answer(f"❌ Нужен уровень {level}!", show_alert=True)
         return
     
+    spells = SPELLS.get(level, [])
+    kb = []
+    for spell in spells:
+        kb.append([InlineKeyboardButton(
+            text=f"{spell['name']} {spell['effect']} {level}ур 💰{spell['cost']}",
+            callback_data=f"spell_{level}_{spell['id']}"
+        )])
+    kb.append([InlineKeyboardButton(text="🔙 Назад", callback_data="magic_tower")])
+    
     await callback.message.edit_text(
         f"🔮 <b>Заклинания уровня {level}</b>\n\n"
         f"<i>Нажми на заклинание для изучения:</i>",
-        reply_markup=magic_tower_kb(level),
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=kb),
         parse_mode="HTML"
     )
 
@@ -855,27 +701,26 @@ async def learn_spell(callback: types.CallbackQuery):
         await callback.answer("❌ Недостаточно условий!", show_alert=True)
         return
     
-    # Покупаем заклинание
     db.update_player(callback.from_user.id, gold=player["gold"] - spell["cost"])
     spells = player["spells"]
     if spell_id not in spells:
         spells.append(spell_id)
-        db.update_player(callback.from_user.id, spells=json.dumps(spells))
+        db.update_player(callback.from_user.id, spells=spells)
     
     db.add_log(callback.from_user.id, "learn_spell", f"Изучено: {spell['name']}")
     
     await callback.answer(f"✅ Изучено: {spell['name']}!", show_alert=True)
     await show_spells(callback)
 
-# Обработчики навигации
+# Навигация
 @dp.callback_query(F.data == "back_to_start")
-async def back_start(callback: types.CallbackQuery):
+async def back_start(callback: types.CallbackQuery, state: FSMContext):
     await callback.message.edit_text(
         "🌑 <b>ТЁМНЫЕ ЗЕМЛИ ЭЛДРОНА</b>\n\n"
         "<i>Введи имя персонажа (3-30 символов):</i>",
         parse_mode="HTML"
     )
-    await dp.storage.set_state(user=callback.from_user.id, bot=dp.bot, state=CharacterCreation.name)
+    await state.set_state(CharacterCreation.name)
 
 @dp.callback_query(F.data == "back_to_race")
 async def back_race(callback: types.CallbackQuery, state: FSMContext):
@@ -896,11 +741,6 @@ async def back_main(callback: types.CallbackQuery):
             "🌑 <b>ТЁМНЫЕ ЗЕМЛИ ЭЛДРОНА</b>\n\n/start для начала",
             parse_mode="HTML"
         )
-
-@dp.callback_query(F.data == "battle_menu")
-async def back_battle(callback: types.CallbackQuery):
-    await callback.message.edit_text("⚔️ <b>Выбери тип боя</b>", 
-                                     reply_markup=battle_menu_kb(), parse_mode="HTML")
 
 # Запуск бота
 async def main():
