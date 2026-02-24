@@ -31,7 +31,7 @@ def init_db():
                     CREATE TABLE IF NOT EXISTS players (
                         user_id INTEGER PRIMARY KEY,
                         username TEXT, name TEXT, race TEXT, class_type TEXT,
-                        level INTEGER DEFAULT 1, exp INTEGER DEFAULT 0, gold INTEGER DEFAULT 1000,
+                        level INTEGER DEFAULT 1, exp INTEGER DEFAULT 0, gold INTEGER DEFAULT 5000,
                         hp INTEGER DEFAULT 30, max_hp INTEGER DEFAULT 30,
                         mp INTEGER DEFAULT 10, max_mp INTEGER DEFAULT 10,
                         strength INTEGER DEFAULT 0, vitality INTEGER DEFAULT 0,
@@ -183,5 +183,46 @@ def get_logs(user_id: int, limit: int = 10) -> List[Dict]:
             if attempt == 4: raise
             time.sleep(attempt + 1)
     return []
+
+# ==================== НОВЫЕ ФУНКЦИИ ДЛЯ ЭКИПИРОВКИ ====================
+
+def calculate_stats_from_equipment(equipment: Dict, shop_items: Dict) -> Dict:
+    """Рассчитывает бонусы от экипировки"""
+    bonuses = {"strength": 0, "vitality": 0, "agility": 0, "intelligence": 0}
+    
+    for slot, item_id in equipment.items():
+        # Ищем предмет во всех категориях
+        for category, items in shop_items.items():
+            for item in items:
+                if item["id"] == item_id:
+                    stat = item.get("stat")
+                    value = item.get("value", 0)
+                    if stat and stat in bonuses:
+                        bonuses[stat] += value
+                    break
+    
+    return bonuses
+
+def apply_equipment_bonuses(player: Dict, shop_items: Dict) -> Dict:
+    """Применяет бонусы экипировки к статам игрока"""
+    equip_bonuses = calculate_stats_from_equipment(player.get("equipment", {}), shop_items)
+    
+    # Пересчитываем статы с учётом экипировки
+    player["strength"] = player.get("base_strength", player["strength"]) + equip_bonuses["strength"]
+    player["vitality"] = player.get("base_vitality", player["vitality"]) + equip_bonuses["vitality"]
+    player["agility"] = player.get("base_agility", player["agility"]) + equip_bonuses["agility"]
+    player["intelligence"] = player.get("base_intelligence", player["intelligence"]) + equip_bonuses["intelligence"]
+    
+    # Пересчитываем боевые характеристики
+    player["phys_atk"] = 5 + player["strength"] * 4
+    player["stealth_atk"] = 10 + player["agility"] * 11
+    player["evasion"] = 8 + player["agility"] * 3
+    player["phys_def"] = 3 + player["vitality"]
+    player["magic_def"] = 3 + player["vitality"]
+    player["magic_atk"] = 10 + player["intelligence"] * 4
+    player["max_hp"] = 30 + player["vitality"] * 10
+    player["max_mp"] = 10 + player["intelligence"] * 3
+    
+    return player
 
 init_db()
