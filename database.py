@@ -4,7 +4,6 @@ import time
 from typing import Optional, Dict, List
 from contextlib import contextmanager
 
-# Используем локальный SQLite файл
 DB_NAME = "eldron.db"
 
 @contextmanager
@@ -13,7 +12,7 @@ def get_connection():
     conn = None
     try:
         conn = sqlite3.connect(DB_NAME, timeout=30.0, check_same_thread=False)
-        conn.execute("PRAGMA journal_mode=WAL")  # Улучшает работу с конкурентным доступом
+        conn.execute("PRAGMA journal_mode=WAL")
         conn.row_factory = sqlite3.Row
         yield conn
     finally:
@@ -28,46 +27,42 @@ def init_db():
             with get_connection() as conn:
                 cursor = conn.cursor()
                 
-                # Таблица игроков
-                # Найдите CREATE TABLE players и добавьте эти поля:
-cursor.execute("""
-    CREATE TABLE IF NOT EXISTS players (
-        user_id INTEGER PRIMARY KEY,
-        username TEXT,
-        name TEXT,
-        race TEXT,
-        class_type TEXT,
-        level INTEGER DEFAULT 1,
-        exp INTEGER DEFAULT 0,
-        gold INTEGER DEFAULT 0,
-        hp INTEGER DEFAULT 30,
-        max_hp INTEGER DEFAULT 30,
-        mp INTEGER DEFAULT 10,
-        max_mp INTEGER DEFAULT 10,
-        strength INTEGER DEFAULT 0,
-        vitality INTEGER DEFAULT 0,
-        agility INTEGER DEFAULT 0,
-        intelligence INTEGER DEFAULT 0,
-        skill_points INTEGER DEFAULT 0,
-        phys_atk INTEGER DEFAULT 5,
-        stealth_atk INTEGER DEFAULT 10,
-        evasion INTEGER DEFAULT 8,
-        phys_def INTEGER DEFAULT 3,
-        magic_def INTEGER DEFAULT 3,
-        magic_atk INTEGER DEFAULT 10,
-        equipment TEXT DEFAULT '{}',
-        inventory TEXT DEFAULT '{}',
-        spells TEXT DEFAULT '[]',
-        -- НОВЫЕ ПОЛЯ ДЛЯ БАФФОВ --
-        buffs TEXT DEFAULT '{}',  -- текущие баффы {"phys_atk": 5, "turns_left": 2}
-        race_magic_active INTEGER DEFAULT 0,  -- активирована ли расовая магия
-        class_magic_used INTEGER DEFAULT 0,  -- использована ли классовая магия в бою
-        summon_hp INTEGER DEFAULT 0,  -- HP призванного существа
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-""")
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS players (
+                        user_id INTEGER PRIMARY KEY,
+                        username TEXT,
+                        name TEXT,
+                        race TEXT,
+                        class_type TEXT,
+                        level INTEGER DEFAULT 1,
+                        exp INTEGER DEFAULT 0,
+                        gold INTEGER DEFAULT 0,
+                        hp INTEGER DEFAULT 30,
+                        max_hp INTEGER DEFAULT 30,
+                        mp INTEGER DEFAULT 10,
+                        max_mp INTEGER DEFAULT 10,
+                        strength INTEGER DEFAULT 0,
+                        vitality INTEGER DEFAULT 0,
+                        agility INTEGER DEFAULT 0,
+                        intelligence INTEGER DEFAULT 0,
+                        skill_points INTEGER DEFAULT 0,
+                        phys_atk INTEGER DEFAULT 5,
+                        stealth_atk INTEGER DEFAULT 10,
+                        evasion INTEGER DEFAULT 8,
+                        phys_def INTEGER DEFAULT 3,
+                        magic_def INTEGER DEFAULT 3,
+                        magic_atk INTEGER DEFAULT 10,
+                        equipment TEXT DEFAULT '{}',
+                        inventory TEXT DEFAULT '{}',
+                        spells TEXT DEFAULT '[]',
+                        buffs TEXT DEFAULT '{}',
+                        race_magic_active INTEGER DEFAULT 0,
+                        class_magic_used INTEGER DEFAULT 0,
+                        summon_hp INTEGER DEFAULT 0,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
                 
-                # Таблица логов
                 cursor.execute("""
                     CREATE TABLE IF NOT EXISTS logs (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -93,7 +88,6 @@ def create_player(user_id: int, username: str, name: str, race: str, class_type:
             with get_connection() as conn:
                 cursor = conn.cursor()
                 
-                # Базовые бонусы расы
                 race_bonuses = {
                     "human": {"skill_points": 3},
                     "elf": {"agility": 3},
@@ -102,7 +96,6 @@ def create_player(user_id: int, username: str, name: str, race: str, class_type:
                     "fallen": {"agility": 1, "intelligence": 2}
                 }
                 
-                # Базовые бонусы класса
                 class_bonuses = {
                     "warrior": {"strength": 1, "vitality": 1},
                     "archer": {"agility": 2},
@@ -112,7 +105,6 @@ def create_player(user_id: int, username: str, name: str, race: str, class_type:
                     "necromancer": {"intelligence": 1, "vitality": 1}
                 }
                 
-                # Применяем бонусы
                 bonuses = {"strength": 0, "vitality": 0, "agility": 0, "intelligence": 0, "skill_points": 0}
                 for key in race_bonuses.get(race, {}):
                     if key in bonuses:
@@ -121,7 +113,6 @@ def create_player(user_id: int, username: str, name: str, race: str, class_type:
                     if key in bonuses:
                         bonuses[key] += class_bonuses[class_type].get(key, 0)
                 
-                # Рассчитываем боевые характеристики
                 phys_atk = 5 + bonuses["strength"] * 4
                 stealth_atk = 10 + bonuses["agility"] * 8 + bonuses["agility"] * 3
                 evasion = 8 + bonuses["agility"] * 3
@@ -131,25 +122,31 @@ def create_player(user_id: int, username: str, name: str, race: str, class_type:
                 max_hp = 30 + bonuses["vitality"] * 10
                 max_mp = 10 + bonuses["intelligence"] * 3
                 
+                # Применяем пассивную магию расы
+                if race == "dwarf":
+                    phys_def += 5  # Каменная кожа +5
+                if race == "elf":
+                    evasion = int(evasion * 1.15)  # Природа +15%
+                
                 cursor.execute("""
                     INSERT INTO players (
                         user_id, username, name, race, class_type,
                         strength, vitality, agility, intelligence, skill_points,
                         phys_atk, stealth_atk, evasion, phys_def, magic_def, magic_atk,
                         hp, max_hp, mp, max_mp,
-                        equipment, inventory, spells
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        equipment, inventory, spells,
+                        buffs, race_magic_active, class_magic_used, summon_hp
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
                     user_id, username, name, race, class_type,
                     bonuses["strength"], bonuses["vitality"], bonuses["agility"], bonuses["intelligence"], bonuses["skill_points"],
                     phys_atk, stealth_atk, evasion, phys_def, magic_def, magic_atk,
                     max_hp, max_hp, max_mp, max_mp,
-                    json.dumps({}), json.dumps({}), json.dumps([])
+                    json.dumps({}), json.dumps({}), json.dumps([]),
+                    json.dumps({}), 0, 0, 0
                 ))
                 
                 conn.commit()
-                
-                # Добавляем лог (отдельное подключение)
                 add_log(user_id, "create_character", f"{name} ({race}, {class_type})")
             break
         except sqlite3.OperationalError as e:
@@ -172,6 +169,7 @@ def get_player(user_id: int) -> Optional[Dict]:
                     player["equipment"] = json.loads(player["equipment"] or "{}")
                     player["inventory"] = json.loads(player["inventory"] or "{}")
                     player["spells"] = json.loads(player["spells"] or "[]")
+                    player["buffs"] = json.loads(player["buffs"] or "{}")
                     return player
             return None
         except sqlite3.OperationalError as e:
@@ -190,8 +188,7 @@ def update_player(user_id: int, **kwargs):
             with get_connection() as conn:
                 cursor = conn.cursor()
                 
-                # Обрабатываем JSON-поля
-                json_fields = ["equipment", "inventory", "spells"]
+                json_fields = ["equipment", "inventory", "spells", "buffs"]
                 for field in json_fields:
                     if field in kwargs and isinstance(kwargs[field], (dict, list)):
                         kwargs[field] = json.dumps(kwargs[field])
