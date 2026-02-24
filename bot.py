@@ -58,25 +58,37 @@ CLASS_MAGIC = {
 
 SHOP_ITEMS = {
     "potions": [
-        {"id": "hp_small", "name": "🧪 Малое зелье HP", "effect": "+30 HP", "price": 50},
-        {"id": "hp_medium", "name": "🧪 Среднее зелье HP", "effect": "+60 HP", "price": 100},
-        {"id": "hp_large", "name": "🧪 Большое зелье HP", "effect": "+100 HP", "price": 150},
-        {"id": "mp_small", "name": "🧪 Малое зелье MP", "effect": "+30 MP", "price": 50},
+        {"id": "hp_small", "name": "🧪 Малое зелье HP", "effect": "+30 HP", "price": 50, "type": "heal", "value": 30},
+        {"id": "hp_medium", "name": "🧪 Среднее зелье HP", "effect": "+60 HP", "price": 100, "type": "heal", "value": 60},
+        {"id": "hp_large", "name": "🧪 Большое зелье HP", "effect": "+100 HP", "price": 150, "type": "heal", "value": 100},
+        {"id": "mp_small", "name": "🧪 Малое зелье MP", "effect": "+30 MP", "price": 50, "type": "mana", "value": 30},
+        {"id": "mp_medium", "name": "🧪 Среднее зелье MP", "effect": "+60 MP", "price": 100, "type": "mana", "value": 60},
+        {"id": "mp_large", "name": "🧪 Большое зелье MP", "effect": "+100 MP", "price": 150, "type": "mana", "value": 100},
     ],
     "weapons": [
-        {"id": "sword", "name": "⚔️ Меч", "effect": "+1 Сила", "price": 150},
-        {"id": "bow", "name": "🏹 Лук", "effect": "+1 Ловкость", "price": 150},
-        {"id": "staff", "name": "🔮 Посох", "effect": "+1 Интеллект", "price": 150},
+        {"id": "sword_apprentice", "name": "⚔️ Меч Ученика", "effect": "+1 Сила", "price": 150, "stat": "strength", "value": 1, "slot": "weapon"},
+        {"id": "sword_knight", "name": "⚔️ Меч Рыцаря", "effect": "+3 Сила", "price": 500, "stat": "strength", "value": 3, "slot": "weapon"},
+        {"id": "bow_apprentice", "name": "🏹 Лук Ученика", "effect": "+1 Ловкость", "price": 150, "stat": "agility", "value": 1, "slot": "weapon"},
+        {"id": "bow_ranger", "name": "🏹 Лук Следопыта", "effect": "+3 Ловкость", "price": 500, "stat": "agility", "value": 3, "slot": "weapon"},
+        {"id": "staff_apprentice", "name": "🔮 Посох Ученика", "effect": "+1 Интеллект", "price": 150, "stat": "intelligence", "value": 1, "slot": "weapon"},
+        {"id": "staff_archmage", "name": "🔮 Посох Архимага", "effect": "+3 Интеллект", "price": 500, "stat": "intelligence", "value": 3, "slot": "weapon"},
     ],
     "armor": [
-        {"id": "helm", "name": "⛑️ Шлем", "effect": "+1 Живучесть", "price": 200},
-        {"id": "armor", "name": "🛡️ Броня", "effect": "+1 Живучесть", "price": 200},
+        {"id": "helm_apprentice", "name": "⛑️ Шлем Ученика", "effect": "+1 Живучесть", "price": 200, "stat": "vitality", "value": 1, "slot": "head"},
+        {"id": "helm_knight", "name": "⛑️ Шлем Рыцаря", "effect": "+3 Живучесть", "price": 600, "stat": "vitality", "value": 3, "slot": "head"},
+        {"id": "armor_apprentice", "name": "🛡️ Броня Ученика", "effect": "+2 Живучесть", "price": 300, "stat": "vitality", "value": 2, "slot": "body"},
+        {"id": "armor_knight", "name": "🛡️ Броня Рыцаря", "effect": "+5 Живучесть", "price": 900, "stat": "vitality", "value": 5, "slot": "body"},
+        {"id": "boots_apprentice", "name": "👢 Ботинки Ученика", "effect": "+1 Ловкость", "price": 200, "stat": "agility", "value": 1, "slot": "feet"},
+        {"id": "boots_ranger", "name": "👢 Сапоги Следопыта", "effect": "+3 Ловкость", "price": 600, "stat": "agility", "value": 3, "slot": "feet"},
     ],
     "accessories": [
-        {"id": "amulet", "name": "📿 Амулет", "effect": "+2 Ловкость", "price": 400},
+        {"id": "amulet_agility", "name": "📿 Амулет Ловкости", "effect": "+2 Ловкость", "price": 400, "stat": "agility", "value": 2, "slot": "accessory"},
+        {"id": "amulet_strength", "name": "📿 Амулет Силы", "effect": "+2 Сила", "price": 400, "stat": "strength", "value": 2, "slot": "accessory"},
+        {"id": "ring_protection", "name": "💍 Кольцо Защиты", "effect": "+2 Живучесть", "price": 400, "stat": "vitality", "value": 2, "slot": "accessory"},
+        {"id": "ring_intelligence", "name": "💍 Кольцо Интеллекта", "effect": "+2 Интеллект", "price": 400, "stat": "intelligence", "value": 2, "slot": "accessory"},
     ],
     "other": [
-        {"id": "scroll_exp", "name": "📜 Свиток опыта", "effect": "+50 Опыта", "price": 500},
+        {"id": "scroll_exp", "name": "📜 Свиток опыта", "effect": "+50 Опыта", "price": 500, "type": "exp", "value": 50},
     ]
 }
 
@@ -139,6 +151,7 @@ def inventory_kb():
         [InlineKeyboardButton(text="⚔️ Оружие", callback_data="inv_weapons")],
         [InlineKeyboardButton(text="🛡️ Броня", callback_data="inv_armor")],
         [InlineKeyboardButton(text="📿 Аксессуары", callback_data="inv_accessories")],
+        [InlineKeyboardButton(text="📦 Разное", callback_data="inv_other")],
         [InlineKeyboardButton(text="🔙 Назад", callback_data="main_menu")],
     ])
 
