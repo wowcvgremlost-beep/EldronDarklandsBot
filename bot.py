@@ -1,6 +1,6 @@
 """
 📁 bot.py - Основной код бота
-ИСПРАВЛЕНО: выбор "одеть/продать" в инвентаре, исправлена продажа
+✅ ИСПРАВЛЕНО: после покупки остаёмся в той же категории магазина
 """
 
 import random, json, os, logging
@@ -25,7 +25,7 @@ class CharacterCreation(StatesGroup):
     race = State()
     class_type = State()
 
-# ==================== ДАННЫЕ (сокращено для краткости - используйте предыдущие RACES, CLASSES, SHOP_ITEMS и т.д.) ====================
+# ==================== ДАННЫЕ ИГРЫ ====================
 RACES = {
     "human": {"name": "🧑 Человек", "bonus": "+3 очка навыка", "magic": "✨ Благословение: +10% к лечению"},
     "elf": {"name": "🧝 Эльф", "bonus": "+3 Ловкость", "magic": "🌿 Природа: Уклонение +15%"},
@@ -50,6 +50,8 @@ CLASS_MAGIC = {
     "paladin": {"name": "✨ Святой свет", "description": "Лечение +20 HP", "type": "active", "mp_cost": 10, "duration": 0},
     "necromancer": {"name": "☠️ Поднять скелета", "description": "Призыв помощника", "type": "active", "mp_cost": 15, "duration": 3}
 }
+
+# 🏪 МАГАЗИН
 SHOP_ITEMS = {
     "potions": [
         {"id": "hp_small", "name": "🧪 Малое зелье HP", "type_name": "Зелья", "type_num": "", "effect": "+30 HP", "price": 50, "stat": "hp", "value": 30, "slot": None},
@@ -84,6 +86,7 @@ SHOP_ITEMS = {
         {"id": "scroll_exp", "name": "📜 Свиток опыта", "type_name": "Разное", "type_num": "", "effect": "+50 Опыта", "price": 500, "stat": "exp", "value": 50, "slot": None},
     ]
 }
+
 SPELLS = {5: [{"id": "fire", "name": "🔥 Огонь", "effect": "+5 Маг.АТК", "cost": 2000}], 15: [{"id": "fireball", "name": "🔥 Шар", "effect": "+15 Маг.АТК", "cost": 5000}]}
 MONSTERS = {"weak": [{"name": "🐀 Крыса", "hp": 15, "phys_atk": 3, "phys_def": 1, "evasion": 3, "exp": 20, "gold": 10}], "medium": [{"name": "🐺 Волк", "hp": 40, "phys_atk": 10, "phys_def": 4, "evasion": 7, "exp": 70, "gold": 40}], "strong": [{"name": "🐉 Дракон", "hp": 80, "phys_atk": 20, "phys_def": 10, "evasion": 10, "exp": 200, "gold": 150}], "bosses": [{"name": "👹 Босс", "hp": 200, "phys_atk": 45, "phys_def": 30, "evasion": 10, "exp": 1000, "gold": 800}], "titan": {"name": "👑 ТИТАН", "hp": 500, "phys_atk": 60, "phys_def": 40, "evasion": 20, "exp": 5000, "gold": 3000}}
 CARDS = {"red": ["👹 Монстр!", "🐺 Атака!"], "yellow": ["📜 Задание: +100💰"], "green": ["✨ Бафф: +10 ко всем"], "black": ["☠️ Дебафф: -10 защиты"]}
@@ -91,20 +94,26 @@ CARDS = {"red": ["👹 Монстр!", "🐺 Атака!"], "yellow": ["📜 З�
 # ==================== КЛАВИАТУРЫ ====================
 def main_menu_kb():
     return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="👤 Персонаж", callback_data="my_character")],[InlineKeyboardButton(text="⭐️ Навыки", callback_data="skills")],[InlineKeyboardButton(text="✨ Способности", callback_data="abilities")],[InlineKeyboardButton(text="🎒 Инвентарь", callback_data="inventory")],[InlineKeyboardButton(text="🏪 Магазин", callback_data="shop")],[InlineKeyboardButton(text="⚔️ Бой", callback_data="battle_menu")],[InlineKeyboardButton(text="🃏 Карточки", callback_data="cards_menu")],[InlineKeyboardButton(text="📜 Лог", callback_data="logs")],[InlineKeyboardButton(text="🔮 Магия", callback_data="magic_tower")]])
+
 def race_kb():
     kb = [[InlineKeyboardButton(text=f"{RACES[r]['name']} {RACES[r]['bonus']}", callback_data=f"race_{r}")] for r in RACES]
     kb.append([InlineKeyboardButton(text="🔙 Назад", callback_data="back_to_start")])
     return InlineKeyboardMarkup(inline_keyboard=kb)
+
 def class_kb():
     kb = [[InlineKeyboardButton(text=f"{CLASSES[c]['name']} {CLASSES[c]['bonus']}", callback_data=f"class_{c}")] for c in CLASSES]
     kb.append([InlineKeyboardButton(text="🔙 Назад", callback_data="back_to_race")])
     return InlineKeyboardMarkup(inline_keyboard=kb)
+
 def skills_kb():
     return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="💪 +1 Сила = ⚔️+4", callback_data="skill_strength")],[InlineKeyboardButton(text="⚡ +1 Ловк = ⚡+8 🛡️+3", callback_data="skill_agility")],[InlineKeyboardButton(text="❤️ +1 Жив = ❤️+10 🛡️+1", callback_data="skill_vitality")],[InlineKeyboardButton(text="🧠 +1 Инт = 💙+3 🔮+4", callback_data="skill_intelligence")],[InlineKeyboardButton(text="🔙 Назад", callback_data="main_menu")]])
+
 def inventory_kb():
     return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🧪 Зелья", callback_data="inv_potions")],[InlineKeyboardButton(text="⚔️ Оружие", callback_data="inv_weapons")],[InlineKeyboardButton(text="🛡️ Экипировка", callback_data="inv_armor")],[InlineKeyboardButton(text="📿 Бижутерия", callback_data="inv_accessories")],[InlineKeyboardButton(text="📦 Разное", callback_data="inv_other")],[InlineKeyboardButton(text="🔙 Назад", callback_data="main_menu")]])
+
 def shop_kb():
     return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🧪 Зелья", callback_data="shop_potions")],[InlineKeyboardButton(text="⚔️ Оружие", callback_data="shop_weapons")],[InlineKeyboardButton(text="🛡️ Экипировка", callback_data="shop_armor")],[InlineKeyboardButton(text="📿 Бижутерия", callback_data="shop_accessories")],[InlineKeyboardButton(text="📦 Разное", callback_data="shop_other")],[InlineKeyboardButton(text="🔙 Назад", callback_data="main_menu")]])
+
 def battle_menu_kb(): return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="👹 vs Монстр", callback_data="battle_pve")],[InlineKeyboardButton(text="🔙 Назад", callback_data="main_menu")]])
 def pve_monsters_kb(): return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🟢 Слабые", callback_data="monster_weak")],[InlineKeyboardButton(text="🟡 Средние", callback_data="monster_medium")],[InlineKeyboardButton(text="🔴 Сильные", callback_data="monster_strong")],[InlineKeyboardButton(text="👑 Боссы", callback_data="monster_bosses")],[InlineKeyboardButton(text="💀 ТИТАН", callback_data="monster_titan")],[InlineKeyboardButton(text="🔙 Назад", callback_data="battle_menu")]])
 def cards_kb(): return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🔴 Красная", callback_data="card_red")],[InlineKeyboardButton(text="🟡 Жёлтая", callback_data="card_yellow")],[InlineKeyboardButton(text="🟢 Зелёная", callback_data="card_green")],[InlineKeyboardButton(text="⚫ Чёрная", callback_data="card_black")],[InlineKeyboardButton(text="🔙 Назад", callback_data="main_menu")]])
@@ -124,19 +133,13 @@ async def edit_safe(message, **kwargs):
 async def cmd_gold(message: types.Message):
     if message.from_user.id not in ADMIN_IDS: await message.answer("🔒 Только для админа!"); return
     parts = message.text.split()
-    if len(parts) < 2:
-        await message.answer("💰 /gold me <сумма> | set <id> <сумма> | add <id> <сумма> | all <сумма>")
-        return
+    if len(parts) < 2: await message.answer("💰 /gold me <сумма> | set <id> <сумма> | add <id> <сумма> | all <сумма>"); return
     action = parts[1]
     try:
-        if action == "me" and len(parts) == 3:
-            amount = int(parts[2]); db.add_gold(message.from_user.id, amount); await message.answer(f"✅ +💰{amount}")
-        elif action == "set" and len(parts) == 4:
-            uid, amount = int(parts[2]), int(parts[3]); db.update_player(uid, gold=amount); await message.answer(f"✅ У {uid} установлено 💰{amount}")
-        elif action == "add" and len(parts) == 4:
-            uid, amount = int(parts[2]), int(parts[3]); db.add_gold(uid, amount); await message.answer(f"✅ {uid} +💰{amount}")
-        elif action == "all" and len(parts) == 3:
-            amount = int(parts[2]); db.update_all_players_gold(amount); await message.answer(f"✅ Всем 💰{amount}")
+        if action == "me" and len(parts) == 3: amount = int(parts[2]); db.add_gold(message.from_user.id, amount); await message.answer(f"✅ +💰{amount}")
+        elif action == "set" and len(parts) == 4: uid, amount = int(parts[2]), int(parts[3]); db.update_player(uid, gold=amount); await message.answer(f"✅ У {uid} установлено 💰{amount}")
+        elif action == "add" and len(parts) == 4: uid, amount = int(parts[2]), int(parts[3]); db.add_gold(uid, amount); await message.answer(f"✅ {uid} +💰{amount}")
+        elif action == "all" and len(parts) == 3: amount = int(parts[2]); db.update_all_players_gold(amount); await message.answer(f"✅ Всем 💰{amount}")
         else: await message.answer("❌ Неверный формат")
     except: await message.answer("❌ Ошибка: числа должны быть числами")
 
@@ -163,25 +166,19 @@ async def cmd_stats(message: types.Message):
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message, state: FSMContext):
     player = db.get_player(message.from_user.id)
-    if player:
-        await message.answer(f"🎮 Добро пожаловать, {player['name']}!\n💰 Золото: {player['gold']}", reply_markup=main_menu_kb(), parse_mode="HTML")
-    else:
-        await message.answer("🌑 <b>ТЁМНЫЕ ЗЕМЛИ ЭЛДРОНА</b>\n\n<i>Введи имя (3-30 символов):</i>", parse_mode="HTML")
-        await state.set_state(CharacterCreation.name)
+    if player: await message.answer(f"🎮 Добро пожаловать, {player['name']}!\n💰 Золото: {player['gold']}", reply_markup=main_menu_kb(), parse_mode="HTML")
+    else: await message.answer("🌑 <b>ТЁМНЫЕ ЗЕМЛИ ЭЛДРОНА</b>\n\n<i>Введи имя (3-30 символов):</i>", parse_mode="HTML"); await state.set_state(CharacterCreation.name)
 
 @dp.message(CharacterCreation.name)
 async def set_name(message: types.Message, state: FSMContext):
     name = message.text.strip()
     if len(name) < 3 or len(name) > 30: await message.answer("❌ Имя от 3 до 30 символов:"); return
-    await state.update_data(name=name)
-    await message.answer(f"✅ Имя: {name}\n\nВыбери расу:", reply_markup=race_kb(), parse_mode="HTML")
-    await state.set_state(CharacterCreation.race)
+    await state.update_data(name=name); await message.answer(f"✅ Имя: {name}\n\nВыбери расу:", reply_markup=race_kb(), parse_mode="HTML"); await state.set_state(CharacterCreation.race)
 
 @dp.callback_query(CharacterCreation.race, F.data.startswith("race_"))
 async def set_race(callback: types.CallbackQuery, state: FSMContext):
     race = callback.data.split("_")[1]; await state.update_data(race=race)
-    await edit_safe(callback.message, text=f"✅ Раса: {RACES[race]['name']}\n{RACES[race]['magic']}\n\nВыбери класс:", reply_markup=class_kb(), parse_mode="HTML")
-    await state.set_state(CharacterCreation.class_type)
+    await edit_safe(callback.message, text=f"✅ Раса: {RACES[race]['name']}\n{RACES[race]['magic']}\n\nВыбери класс:", reply_markup=class_kb(), parse_mode="HTML"); await state.set_state(CharacterCreation.class_type)
 
 @dp.callback_query(CharacterCreation.class_type, F.data.startswith("class_"))
 async def set_class(callback: types.CallbackQuery, state: FSMContext):
@@ -249,11 +246,9 @@ async def show_inventory(callback: types.CallbackQuery):
             text += f"• {item_name} x{count}\n"
     await edit_safe(callback.message, text=text, reply_markup=inventory_kb(), parse_mode="HTML")
 
-# ==================== 🔧 НОВЫЙ ИНВЕНТАРЬ С ВЫБОРОМ ДЕЙСТВИЯ ====================
-
+# ==================== ИНВЕНТАРЬ С ВЫБОРОМ ДЕЙСТВИЯ ====================
 @dp.callback_query(F.data.startswith("inv_"))
 async def show_inventory_category(callback: types.CallbackQuery):
-    """Показывает предметы с кнопками выбора действия"""
     player = db.get_player(callback.from_user.id)
     if not player: await callback.answer("❌ Создай персонажа!", show_alert=True); return
     cat_map = {"inv_potions": "potions", "inv_weapons": "weapons", "inv_armor": "armor", "inv_accessories": "accessories", "inv_other": "other"}
@@ -261,7 +256,6 @@ async def show_inventory_category(callback: types.CallbackQuery):
     items_in_inv = [(item, inv[item["id"]]) for item in SHOP_ITEMS.get(category, []) if item["id"] in inv and inv[item["id"]] > 0]
     kb = []
     for item, count in items_in_inv:
-        # Кнопка с выбором действия: Одеть / Продать
         kb.append([InlineKeyboardButton(text=f"🎒 {item['name']} x{count}", callback_data=f"item_select_{item['id']}")])
     kb.append([InlineKeyboardButton(text="🔙 Назад", callback_data="inventory")])
     text = f"🎒 {category.title()}\n\n<i>Нажми на предмет для выбора действия:</i>"
@@ -269,17 +263,14 @@ async def show_inventory_category(callback: types.CallbackQuery):
 
 @dp.callback_query(F.data.startswith("item_select_"))
 async def item_action_menu(callback: types.CallbackQuery):
-    """Показывает меню выбора: Одеть или Продать"""
     player = db.get_player(callback.from_user.id)
     if not player: await callback.answer("❌ Ошибка!", show_alert=True); return
     item_id = callback.data.split("_", 2)[2]
     item = next((i for cat in SHOP_ITEMS.values() for i in cat if i["id"] == item_id), None)
     if not item: await callback.answer("❌ Предмет не найден!", show_alert=True); return
     count = player["inventory"].get(item_id, 0)
-    # Кнопки действий
     kb = []
-    if item.get("slot"):  # Можно экипировать только если есть слот
-        kb.append([InlineKeyboardButton(text="⚔️ Одеть", callback_data=f"equip_{item_id}")])
+    if item.get("slot"): kb.append([InlineKeyboardButton(text="⚔️ Одеть", callback_data=f"equip_{item_id}")])
     kb.append([InlineKeyboardButton(text=f"💰 Продать за {item['price']//2}💰", callback_data=f"sell_{item_id}")])
     kb.append([InlineKeyboardButton(text="🔙 Назад", callback_data="inventory")])
     text = f"🎒 {item['name']} x{count}\n\n{item['effect']}\n💰 Цена: {item['price']} | Продажа: {item['price']//2}\n\n<i>Выбери действие:</i>"
@@ -287,7 +278,6 @@ async def item_action_menu(callback: types.CallbackQuery):
 
 @dp.callback_query(F.data.startswith("equip_"))
 async def equip_item(callback: types.CallbackQuery):
-    """✅ ИСПРАВЛЕНО: пересчёт всех статов с нуля"""
     player = db.get_player(callback.from_user.id)
     if not player: await callback.answer("❌ Создай персонажа!", show_alert=True); return
     item_id = callback.data.split("_", 1)[1]
@@ -295,21 +285,17 @@ async def equip_item(callback: types.CallbackQuery):
     item = next((i for cat in SHOP_ITEMS.values() for i in cat if i["id"] == item_id), None)
     item_slot = item.get("slot") if item else None
     if not item_slot: await callback.answer("❌ Предмет не экипируется!", show_alert=True); return
-    # Экипируем
     equipment = player["equipment"]; equipment[item_slot] = item_id
     db.update_player(callback.from_user.id, equipment=equipment)
-    # ✅ ПЕРЕРАСЧИТЫВАЕМ ВСЕ статы с нуля
     updated_player = db.get_player(callback.from_user.id)
     new_stats = db.recalc_all_stats(updated_player, SHOP_ITEMS)
-    # Обновляем статы в БД
     db.update_player(callback.from_user.id, **{k: new_stats[k] for k in ["strength", "vitality", "agility", "intelligence", "skill_points", "phys_atk", "stealth_atk", "evasion", "phys_def", "magic_def", "magic_atk", "max_hp", "max_mp", "hp", "mp"]})
     db.add_log(callback.from_user.id, "equip_item", f"Надел {item['name']}")
     await callback.answer(f"✅ {item['name']} надето!", show_alert=True)
-    await item_action_menu(callback)  # Возвращаемся к меню выбора
+    await item_action_menu(callback)
 
 @dp.callback_query(F.data.startswith("sell_"))
 async def sell_item(callback: types.CallbackQuery):
-    """✅ ИСПРАВЛЕНО: корректное удаление предмета"""
     player = db.get_player(callback.from_user.id)
     if not player: await callback.answer("❌ Создай персонажа!", show_alert=True); return
     item_id = callback.data.split("_", 1)[1]
@@ -318,44 +304,76 @@ async def sell_item(callback: types.CallbackQuery):
     item = next((i for cat in SHOP_ITEMS.values() for i in cat if i["id"] == item_id), None)
     if not item: await callback.answer("❌ Предмет не найден!", show_alert=True); return
     price = item["price"] // 2
-    # ✅ Уменьшаем количество или удаляем
     inv[item_id] -= 1
-    if inv[item_id] <= 0:
-        del inv[item_id]  # ✅ Удаляем ключ из словаря
-    # ✅ Обновляем инвентарь и золото ОДНИМ запросом
+    if inv[item_id] <= 0: del inv[item_id]
     db.update_player(callback.from_user.id, inventory=inv, gold=player["gold"] + price)
     db.add_log(callback.from_user.id, "sell_item", f"Продал {item['name']} за 💰{price}")
     await callback.answer(f"✅ Продано: {item['name']} за 💰{price}!", show_alert=True)
-    await show_inventory_category(callback)  # Возвращаемся к списку
+    await show_inventory_category(callback)
 
+# ==================== 🔧 МАГАЗИН — ИСПРАВЛЕННЫЙ ====================
 @dp.callback_query(F.data == "shop")
 async def show_shop(callback: types.CallbackQuery):
     await edit_safe(callback.message, text="🏪 Магазин\n\nВыбери категорию:", reply_markup=shop_kb(), parse_mode="HTML")
 
 @dp.callback_query(F.data.startswith("shop_"))
 async def show_shop_category(callback: types.CallbackQuery):
+    """Показывает товары категории — используется после покупки"""
     cat_map = {"shop_potions": "potions", "shop_weapons": "weapons", "shop_armor": "armor", "shop_accessories": "accessories", "shop_other": "other"}
-    category = cat_map.get(callback.data, "potions"); items = SHOP_ITEMS.get(category, [])
+    category = cat_map.get(callback.data, "potions")
+    items = SHOP_ITEMS.get(category, [])
     kb = [[InlineKeyboardButton(text=f"{item['name']} {item['effect']} 💰{item['price']}", callback_data=f"buy_{category}_{item['id']}")] for item in items]
     kb.append([InlineKeyboardButton(text="🔙 Назад", callback_data="shop")])
     await edit_safe(callback.message, text=f"🏪 {category.title()}\n\n<i>Нажми для покупки:</i>", reply_markup=InlineKeyboardMarkup(inline_keyboard=kb), parse_mode="HTML")
 
 @dp.callback_query(F.data.startswith("buy_"))
 async def buy_item(callback: types.CallbackQuery):
-    uid = callback.from_user.id; parts = callback.data.split("_", 2)
-    if len(parts) != 3: await callback.answer("❌ Ошибка формата!", show_alert=True); return
-    cat, iid = parts[1], parts[2]
+    """✅ ИСПРАВЛЕНО: после покупки остаёмся в той же категории"""
+    uid = callback.from_user.id
+    # ✅ Разбиваем callback_data: buy_weapons_sword_apprentice → ["buy", "weapons", "sword_apprentice"]
+    parts = callback.data.split("_", 2)
+    if len(parts) != 3:
+        await callback.answer("❌ Ошибка формата!", show_alert=True); return
+    category, item_id = parts[1], parts[2]
+    
     player = db.get_player(uid)
     if not player: await callback.answer("❌ Персонаж не найден!", show_alert=True); return
-    item = next((i for i in SHOP_ITEMS.get(cat, []) if i["id"] == iid), None)
-    if not item: await callback.answer(f"❌ Предмет не найден: {iid}", show_alert=True); return
-    if player["gold"] < item["price"]: await callback.answer(f"❌ Нужно 💰{item['price']}, у вас 💰{player['gold']}", show_alert=True); return
-    if not db.spend_gold(uid, item["price"]): await callback.answer("❌ Ошибка списания!", show_alert=True); return
-    inv = player.get("inventory", {}); inv[iid] = inv.get(iid, 0) + 1
-    db.update_player(uid, inventory=inv); db.add_log(uid, "buy_item", f"Купил {item['name']}")
+    
+    # Ищем предмет в указанной категории
+    item = None
+    for i in SHOP_ITEMS.get(category, []):
+        if i["id"] == item_id:
+            item = i
+            break
+    if not item:
+        await callback.answer(f"❌ Предмет не найден: {item_id}", show_alert=True); return
+    
+    current_gold = int(player.get("gold", 0))
+    item_price = int(item.get("price", 0))
+    
+    if current_gold < item_price:
+        await callback.answer(f"❌ Нужно 💰{item_price}, у вас 💰{current_gold}", show_alert=True); return
+    
+    if not db.spend_gold(uid, item_price):
+        await callback.answer("❌ Ошибка списания!", show_alert=True); return
+    
+    inv = player.get("inventory", {}); inv[item_id] = inv.get(item_id, 0) + 1
+    db.update_player(uid, inventory=inv)
+    db.add_log(uid, "buy_item", f"Купил {item['name']}")
+    
     await callback.answer(f"✅ Куплено: {item['name']}!", show_alert=True)
-    await show_shop_category(callback)
+    
+    # ✅ ГЛАВНОЕ ИСПРАВЛЕНИЕ: показываем ТОТУ ЖЕ категорию, а не зелья!
+    await show_shop_category_by_name(callback, category)
 
+async def show_shop_category_by_name(callback: types.CallbackQuery, category: str):
+    """Показывает товары по имени категории — для возврата после покупки"""
+    items = SHOP_ITEMS.get(category, [])
+    kb = [[InlineKeyboardButton(text=f"{item['name']} {item['effect']} 💰{item['price']}", callback_data=f"buy_{category}_{item['id']}")] for item in items]
+    kb.append([InlineKeyboardButton(text="🔙 Назад", callback_data="shop")])
+    await edit_safe(callback.message, text=f"🏪 {category.title()}\n\n<i>Нажми для покупки:</i>", reply_markup=InlineKeyboardMarkup(inline_keyboard=kb), parse_mode="HTML")
+
+# ==================== ОСТАЛЬНЫЕ ХЕНДЛЕРЫ ====================
 @dp.callback_query(F.data == "battle_menu")
 async def battle_menu(callback: types.CallbackQuery):
     await edit_safe(callback.message, text="⚔️ Бой", reply_markup=battle_menu_kb(), parse_mode="HTML")
