@@ -1,4 +1,12 @@
-import random, json, os, logging
+"""
+📁 bot.py - Основной код Telegram бота
+Здесь все хендлеры команд и кнопок
+"""
+
+import random
+import json
+import os
+import logging
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
@@ -6,24 +14,29 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 from aiohttp import web
-from config import BOT_TOKEN
+from config import BOT_TOKEN, ADMIN_IDS
 import database as db
 
 # Настройка логирования
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
 # Инициализация бота
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
-# ==================== СОСТОЯНИЯ ====================
+# ==================== СОСТОЯНИЯ (FSM) ====================
 class CharacterCreation(StatesGroup):
     name = State()
     race = State()
     class_type = State()
 
-# ==================== ДАННЫЕ ====================
+# ==================== ДАННЫЕ ИГРЫ ====================
+
+# 🧬 Расы (можно добавлять новые)
 RACES = {
     "human": {"name": "🧑 Человек", "bonus": "+3 очка навыка", "magic": "✨ Благословение: +10% к лечению"},
     "elf": {"name": "🧝 Эльф", "bonus": "+3 Ловкость", "magic": "🌿 Природа: Уклонение +15%"},
@@ -32,6 +45,7 @@ RACES = {
     "fallen": {"name": "💀 Падший", "bonus": "+1 Ловк, +2 Инт", "magic": "👻 Тень: Первый удар скрытный"}
 }
 
+# ⚔️ Классы (можно добавлять новые)
 CLASSES = {
     "warrior": {"name": "⚔️ Воин", "bonus": "+1 Сила, +1 Жив", "magic": "🗡️ Воинский клич: +5 Физ.АТК"},
     "archer": {"name": "🏹 Лучник", "bonus": "+2 Ловкость", "magic": "🎯 Точный выстрел: Игнор 5 защиты"},
@@ -41,10 +55,17 @@ CLASSES = {
     "necromancer": {"name": "💀 Некромант", "bonus": "+1 Инт, +1 Жив", "magic": "☠️ Поднять скелета: Призыв"}
 }
 
-RACE_MAGIC = {r: {"name": RACES[r]["magic"].split(":")[0].strip(), 
-                  "description": RACES[r]["magic"].split(":")[1].strip() if ":" in RACES[r]["magic"] else "", 
-                  "type": "passive"} for r in RACES}
+# ✨ Магия рас
+RACE_MAGIC = {
+    r: {
+        "name": RACES[r]["magic"].split(":")[0].strip(),
+        "description": RACES[r]["magic"].split(":")[1].strip() if ":" in RACES[r]["magic"] else "",
+        "type": "passive"
+    }
+    for r in RACES
+}
 
+# ⚔️ Магия классов
 CLASS_MAGIC = {
     "warrior": {"name": "🗡️ Воинский клич", "description": "+5 Физ.АТК на 1 ход", "type": "active", "mp_cost": 5, "duration": 1},
     "archer": {"name": "🎯 Точный выстрел", "description": "Игнорирует 5 защиты", "type": "active", "mp_cost": 5, "duration": 1},
@@ -54,7 +75,10 @@ CLASS_MAGIC = {
     "necromancer": {"name": "☠️ Поднять скелета", "description": "Призыв помощника", "type": "active", "mp_cost": 15, "duration": 3}
 }
 
-# ==================== МАГАЗИН ====================
+# 🏪 МАГАЗИН (МОЖНО МЕНЯТЬ ТОВАРЫ!)
+# 🔧 Чтобы изменить товары: редактируйте этот словарь
+# Формат: "id": уникальный ID, "name": название, "effect": эффект, "price": цена,
+#         "stat": какой навык улучшает, "value": на сколько, "slot": слот экипировки
 SHOP_ITEMS = {
     "potions": [
         {"id": "hp_small", "name": "🧪 Малое зелье HP", "type_name": "Зелья", "type_num": "", "effect": "+30 HP", "price": 50, "stat": "hp", "value": 30, "slot": None},
@@ -90,11 +114,13 @@ SHOP_ITEMS = {
     ]
 }
 
+# 🔮 Заклинания башни магии
 SPELLS = {
     5: [{"id": "fire", "name": "🔥 Огонь", "effect": "+5 Маг.АТК", "cost": 2000}],
     15: [{"id": "fireball", "name": "🔥 Шар", "effect": "+15 Маг.АТК", "cost": 5000}],
 }
 
+# 👹 Монстры для боя
 MONSTERS = {
     "weak": [{"name": "🐀 Крыса", "hp": 15, "phys_atk": 3, "phys_def": 1, "evasion": 3, "exp": 20, "gold": 10}],
     "medium": [{"name": "🐺 Волк", "hp": 40, "phys_atk": 10, "phys_def": 4, "evasion": 7, "exp": 70, "gold": 40}],
@@ -103,6 +129,7 @@ MONSTERS = {
     "titan": {"name": "👑 ТИТАН", "hp": 500, "phys_atk": 60, "phys_def": 40, "evasion": 20, "exp": 5000, "gold": 3000}
 }
 
+# 🃏 Карточки событий
 CARDS = {
     "red": ["👹 Монстр!", "🐺 Атака!"],
     "yellow": ["📜 Задание: +100💰"],
@@ -209,7 +236,128 @@ async def edit_safe(message, **kwargs):
         logger.error(f"❌ Ошибка редактирования: {e}")
         raise
 
-# ==================== ХЕНДЛЕРЫ ====================
+# ==================== АДМИН-КОМАНДЫ (ДЛЯ ТЕСТОВ) ====================
+
+@dp.message(Command("gold"))
+async def cmd_gold(message: types.Message):
+    """
+    💰 АДМИН-КОМАНДА: Управление золотом
+    Использование:
+    /gold me 5000          — добавить себе 5000
+    /gold set <id> 5000    — установить игроку 5000
+    /gold add <id> 1000    — добавить игроку 1000
+    /gold all 5000         — всем игрокам 5000
+    """
+    if message.from_user.id not in ADMIN_IDS:
+        await message.answer("🔒 Только для админа!")
+        return
+    
+    parts = message.text.split()
+    if len(parts) < 2:
+        await message.answer(
+            "💰 <b>Управление золотом:</b>\n\n"
+            "/gold me <сумма> — добавить себе\n"
+            "/gold set <user_id> <сумма> — установить\n"
+            "/gold add <user_id> <сумма> — добавить\n"
+            "/gold all <сумма> — всем игрокам",
+            parse_mode="HTML"
+        )
+        return
+    
+    action = parts[1]
+    
+    try:
+        if action == "me" and len(parts) == 3:
+            amount = int(parts[2])
+            db.add_gold(message.from_user.id, amount)
+            await message.answer(f"✅ Вам добавлено 💰{amount}")
+            db.add_log(message.from_user.id, "admin_gold_me", f"Добавлено {amount} золота")
+        
+        elif action == "set" and len(parts) == 4:
+            uid = int(parts[2])
+            amount = int(parts[3])
+            db.update_player(uid, gold=amount)
+            await message.answer(f"✅ У игрока {uid} установлено 💰{amount}")
+            db.add_log(uid, "admin_gold_set", f"Установлено {amount} золота")
+        
+        elif action == "add" and len(parts) == 4:
+            uid = int(parts[2])
+            amount = int(parts[3])
+            db.add_gold(uid, amount)
+            await message.answer(f"✅ Игроку {uid} добавлено 💰{amount}")
+            db.add_log(uid, "admin_gold_add", f"Добавлено {amount} золота")
+        
+        elif action == "all" and len(parts) == 3:
+            amount = int(parts[2])
+            db.update_all_players_gold(amount)
+            await message.answer(f"✅ Всем игрокам установлено 💰{amount}")
+            db.add_log(message.from_user.id, "admin_gold_all", f"Всем установлено {amount} золота")
+        
+        else:
+            await message.answer("❌ Неверный формат. Используйте /gold для справки")
+    
+    except ValueError:
+        await message.answer("❌ Ошибка: сумма и user_id должны быть числами")
+    except Exception as e:
+        logger.error(f"❌ Ошибка gold команды: {e}")
+        await message.answer(f"❌ Ошибка: {e}")
+
+@dp.message(Command("reset"))
+async def cmd_reset(message: types.Message):
+    """
+    🗑️ АДМИН-КОМАНДА: Сброс прогресса игрока
+    Использование: /reset <user_id>
+    """
+    if message.from_user.id not in ADMIN_IDS:
+        await message.answer("🔒 Только для админа!")
+        return
+    
+    parts = message.text.split()
+    if len(parts) != 2:
+        await message.answer("Использование: /reset <user_id>")
+        return
+    
+    try:
+        uid = int(parts[1])
+        # Удаляем игрока из БД
+        with db.get_connection() as conn:
+            c = conn.cursor()
+            c.execute("DELETE FROM players WHERE user_id = ?", (uid,))
+            c.execute("DELETE FROM logs WHERE user_id = ?", (uid,))
+            conn.commit()
+        await message.answer(f"✅ Прогресс игрока {uid} сброшен")
+        logger.info(f"🗑️ Сброшен прогресс игрока {uid}")
+    except Exception as e:
+        logger.error(f"❌ Ошибка reset: {e}")
+        await message.answer(f"❌ Ошибка: {e}")
+
+@dp.message(Command("stats"))
+async def cmd_stats(message: types.Message):
+    """
+    📊 АДМИН-КОМАНДА: Статистика бота
+    """
+    if message.from_user.id not in ADMIN_IDS:
+        await message.answer("🔒 Только для админа!")
+        return
+    
+    try:
+        with db.get_connection() as conn:
+            c = conn.cursor()
+            c.execute("SELECT COUNT(*) FROM players")
+            players_count = c.fetchone()[0]
+            c.execute("SELECT SUM(gold) FROM players")
+            total_gold = c.fetchone()[0] or 0
+        await message.answer(
+            f"📊 <b>Статистика бота:</b>\n\n"
+            f"👥 Игроков: {players_count}\n"
+            f"💰 Всего золота: {total_gold}",
+            parse_mode="HTML"
+        )
+    except Exception as e:
+        await message.answer(f"❌ Ошибка: {e}")
+
+# ==================== ОСНОВНЫЕ ХЕНДЛЕРЫ ====================
+
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message, state: FSMContext):
     """Обработчик команды /start"""
@@ -218,14 +366,14 @@ async def cmd_start(message: types.Message, state: FSMContext):
     player = db.get_player(message.from_user.id)
     if player:
         await message.answer(
-            f"🎮 Добро пожаловать, {player['name']}!", 
-            reply_markup=main_menu_kb(), 
+            f"🎮 Добро пожаловать, {player['name']}!\n💰 Золото: {player['gold']}",
+            reply_markup=main_menu_kb(),
             parse_mode="HTML"
         )
         logger.info(f"✅ Ответ отправлен существующему игроку {player['name']}")
     else:
         await message.answer(
-            "🌑 <b>ТЁМНЫЕ ЗЕМЛИ ЭЛДРОНА</b>\n\n<i>Введи имя (3-30 символов):</i>", 
+            "🌑 <b>ТЁМНЫЕ ЗЕМЛИ ЭЛДРОНА</b>\n\n<i>Введи имя (3-30 символов):</i>",
             parse_mode="HTML"
         )
         await state.set_state(CharacterCreation.name)
@@ -255,7 +403,7 @@ async def set_class(callback: types.CallbackQuery, state: FSMContext):
     db.create_player(callback.from_user.id, callback.from_user.username or "Hero", data["name"], data["race"], class_type)
     await state.clear()
     rm, cm = RACE_MAGIC.get(data["race"], {}), CLASS_MAGIC.get(class_type, {})
-    text = f"🎉 <b>Герой создан!</b>\n\n👤 {data['name']}\n🧬 {RACES[data['race']]['name']} | {CLASSES[class_type]['name']}\n✨ {rm.get('name','')}: {rm.get('description','')}\n⚔️ {cm.get('name','')}: {cm.get('description','')}\n\nТвоё приключение начинается!"
+    text = f"🎉 <b>Герой создан!</b>\n\n👤 {data['name']}\n🧬 {RACES[data['race']]['name']} | {CLASSES[class_type]['name']}\n✨ {rm.get('name','')}: {rm.get('description','')}\n⚔️ {cm.get('name','')}: {cm.get('description','')}\n💰 Золото: 5000\n\nТвоё приключение начинается!"
     await edit_safe(callback.message, text=text, reply_markup=main_menu_kb(), parse_mode="HTML")
 
 @dp.callback_query(F.data == "my_character")
@@ -498,7 +646,6 @@ async def buy_item(callback: types.CallbackQuery):
     await show_shop_category_with_cat(callback, cat)
 
 async def show_shop_category_with_cat(callback: types.CallbackQuery, cat: str):
-    """Показывает категорию магазина по имени"""
     items = SHOP_ITEMS.get(cat, [])
     kb = [[InlineKeyboardButton(text=f"{item['name']} {item['effect']} 💰{item['price']}", callback_data=f"buy_{cat}_{item['id']}")] for item in items]
     kb.append([InlineKeyboardButton(text="🔙 Назад", callback_data="shop")])
