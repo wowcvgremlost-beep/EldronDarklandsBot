@@ -1,6 +1,8 @@
 """
 📁 bot.py - Основной код бота
-✅ ИСПРАВЛЕНО: после покупки остаёмся в той же категории магазина
+✅ ИСПРАВЛЕНО: 
+   - Продажа экипированного предмета снимает его и пересчитывает статы
+   - Добавлена кнопка "🔻 Снять" для экипировки
 """
 
 import random, json, os, logging
@@ -51,7 +53,6 @@ CLASS_MAGIC = {
     "necromancer": {"name": "☠️ Поднять скелета", "description": "Призыв помощника", "type": "active", "mp_cost": 15, "duration": 3}
 }
 
-# 🏪 МАГАЗИН
 SHOP_ITEMS = {
     "potions": [
         {"id": "hp_small", "name": "🧪 Малое зелье HP", "type_name": "Зелья", "type_num": "", "effect": "+30 HP", "price": 50, "stat": "hp", "value": 30, "slot": None},
@@ -94,26 +95,20 @@ CARDS = {"red": ["👹 Монстр!", "🐺 Атака!"], "yellow": ["📜 З�
 # ==================== КЛАВИАТУРЫ ====================
 def main_menu_kb():
     return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="👤 Персонаж", callback_data="my_character")],[InlineKeyboardButton(text="⭐️ Навыки", callback_data="skills")],[InlineKeyboardButton(text="✨ Способности", callback_data="abilities")],[InlineKeyboardButton(text="🎒 Инвентарь", callback_data="inventory")],[InlineKeyboardButton(text="🏪 Магазин", callback_data="shop")],[InlineKeyboardButton(text="⚔️ Бой", callback_data="battle_menu")],[InlineKeyboardButton(text="🃏 Карточки", callback_data="cards_menu")],[InlineKeyboardButton(text="📜 Лог", callback_data="logs")],[InlineKeyboardButton(text="🔮 Магия", callback_data="magic_tower")]])
-
 def race_kb():
     kb = [[InlineKeyboardButton(text=f"{RACES[r]['name']} {RACES[r]['bonus']}", callback_data=f"race_{r}")] for r in RACES]
     kb.append([InlineKeyboardButton(text="🔙 Назад", callback_data="back_to_start")])
     return InlineKeyboardMarkup(inline_keyboard=kb)
-
 def class_kb():
     kb = [[InlineKeyboardButton(text=f"{CLASSES[c]['name']} {CLASSES[c]['bonus']}", callback_data=f"class_{c}")] for c in CLASSES]
     kb.append([InlineKeyboardButton(text="🔙 Назад", callback_data="back_to_race")])
     return InlineKeyboardMarkup(inline_keyboard=kb)
-
 def skills_kb():
     return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="💪 +1 Сила = ⚔️+4", callback_data="skill_strength")],[InlineKeyboardButton(text="⚡ +1 Ловк = ⚡+8 🛡️+3", callback_data="skill_agility")],[InlineKeyboardButton(text="❤️ +1 Жив = ❤️+10 🛡️+1", callback_data="skill_vitality")],[InlineKeyboardButton(text="🧠 +1 Инт = 💙+3 🔮+4", callback_data="skill_intelligence")],[InlineKeyboardButton(text="🔙 Назад", callback_data="main_menu")]])
-
 def inventory_kb():
     return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🧪 Зелья", callback_data="inv_potions")],[InlineKeyboardButton(text="⚔️ Оружие", callback_data="inv_weapons")],[InlineKeyboardButton(text="🛡️ Экипировка", callback_data="inv_armor")],[InlineKeyboardButton(text="📿 Бижутерия", callback_data="inv_accessories")],[InlineKeyboardButton(text="📦 Разное", callback_data="inv_other")],[InlineKeyboardButton(text="🔙 Назад", callback_data="main_menu")]])
-
 def shop_kb():
     return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🧪 Зелья", callback_data="shop_potions")],[InlineKeyboardButton(text="⚔️ Оружие", callback_data="shop_weapons")],[InlineKeyboardButton(text="🛡️ Экипировка", callback_data="shop_armor")],[InlineKeyboardButton(text="📿 Бижутерия", callback_data="shop_accessories")],[InlineKeyboardButton(text="📦 Разное", callback_data="shop_other")],[InlineKeyboardButton(text="🔙 Назад", callback_data="main_menu")]])
-
 def battle_menu_kb(): return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="👹 vs Монстр", callback_data="battle_pve")],[InlineKeyboardButton(text="🔙 Назад", callback_data="main_menu")]])
 def pve_monsters_kb(): return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🟢 Слабые", callback_data="monster_weak")],[InlineKeyboardButton(text="🟡 Средние", callback_data="monster_medium")],[InlineKeyboardButton(text="🔴 Сильные", callback_data="monster_strong")],[InlineKeyboardButton(text="👑 Боссы", callback_data="monster_bosses")],[InlineKeyboardButton(text="💀 ТИТАН", callback_data="monster_titan")],[InlineKeyboardButton(text="🔙 Назад", callback_data="battle_menu")]])
 def cards_kb(): return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🔴 Красная", callback_data="card_red")],[InlineKeyboardButton(text="🟡 Жёлтая", callback_data="card_yellow")],[InlineKeyboardButton(text="🟢 Зелёная", callback_data="card_green")],[InlineKeyboardButton(text="⚫ Чёрная", callback_data="card_black")],[InlineKeyboardButton(text="🔙 Назад", callback_data="main_menu")]])
@@ -246,9 +241,11 @@ async def show_inventory(callback: types.CallbackQuery):
             text += f"• {item_name} x{count}\n"
     await edit_safe(callback.message, text=text, reply_markup=inventory_kb(), parse_mode="HTML")
 
-# ==================== ИНВЕНТАРЬ С ВЫБОРОМ ДЕЙСТВИЯ ====================
+# ==================== 🔧 ИНВЕНТАРЬ С ВЫБОРОМ ДЕЙСТВИЯ + КНОПКА "СНЯТЬ" ====================
+
 @dp.callback_query(F.data.startswith("inv_"))
 async def show_inventory_category(callback: types.CallbackQuery):
+    """Показывает предметы с кнопками выбора действия + кнопка 'Снять' если что-то экипировано"""
     player = db.get_player(callback.from_user.id)
     if not player: await callback.answer("❌ Создай персонажа!", show_alert=True); return
     cat_map = {"inv_potions": "potions", "inv_weapons": "weapons", "inv_armor": "armor", "inv_accessories": "accessories", "inv_other": "other"}
@@ -257,23 +254,39 @@ async def show_inventory_category(callback: types.CallbackQuery):
     kb = []
     for item, count in items_in_inv:
         kb.append([InlineKeyboardButton(text=f"🎒 {item['name']} x{count}", callback_data=f"item_select_{item['id']}")])
+    # ✅ Кнопка "Снять всё" если в этой категории есть экипировка
+    slot_prefix = {"weapons": "weapon", "armor": "armor", "accessories": "accessory"}.get(category)
+    if slot_prefix and any(slot.startswith(slot_prefix) for slot in player.get("equipment", {})):
+        kb.append([InlineKeyboardButton(text="🔻 Снять всю экипировку", callback_data=f"unequip_all_{category}")])
     kb.append([InlineKeyboardButton(text="🔙 Назад", callback_data="inventory")])
     text = f"🎒 {category.title()}\n\n<i>Нажми на предмет для выбора действия:</i>"
     await edit_safe(callback.message, text=text, reply_markup=InlineKeyboardMarkup(inline_keyboard=kb), parse_mode="HTML")
 
 @dp.callback_query(F.data.startswith("item_select_"))
 async def item_action_menu(callback: types.CallbackQuery):
+    """Показывает меню выбора: Одеть / Продать / Снять"""
     player = db.get_player(callback.from_user.id)
     if not player: await callback.answer("❌ Ошибка!", show_alert=True); return
     item_id = callback.data.split("_", 2)[2]
     item = next((i for cat in SHOP_ITEMS.values() for i in cat if i["id"] == item_id), None)
     if not item: await callback.answer("❌ Предмет не найден!", show_alert=True); return
     count = player["inventory"].get(item_id, 0)
+    # Проверяем, экипирован ли предмет
+    equipped_slot = None
+    for slot, eid in player.get("equipment", {}).items():
+        if eid == item_id:
+            equipped_slot = slot
+            break
     kb = []
-    if item.get("slot"): kb.append([InlineKeyboardButton(text="⚔️ Одеть", callback_data=f"equip_{item_id}")])
+    if item.get("slot") and not equipped_slot:
+        kb.append([InlineKeyboardButton(text="⚔️ Одеть", callback_data=f"equip_{item_id}")])
+    elif equipped_slot:
+        kb.append([InlineKeyboardButton(text="✅ Экипировано", callback_data="noop")])
+        kb.append([InlineKeyboardButton(text="🔻 Снять", callback_data=f"unequip_{item_id}")])
     kb.append([InlineKeyboardButton(text=f"💰 Продать за {item['price']//2}💰", callback_data=f"sell_{item_id}")])
     kb.append([InlineKeyboardButton(text="🔙 Назад", callback_data="inventory")])
-    text = f"🎒 {item['name']} x{count}\n\n{item['effect']}\n💰 Цена: {item['price']} | Продажа: {item['price']//2}\n\n<i>Выбери действие:</i>"
+    status = "✅ Экипировано" if equipped_slot else "🎒 В инвентаре"
+    text = f"🎒 {item['name']} x{count}\n\n{item['effect']}\n💰 Цена: {item['price']} | Продажа: {item['price']//2}\n📊 Статус: {status}\n\n<i>Выбери действие:</i>"
     await edit_safe(callback.message, text=text, reply_markup=InlineKeyboardMarkup(inline_keyboard=kb), parse_mode="HTML")
 
 @dp.callback_query(F.data.startswith("equip_"))
@@ -294,8 +307,67 @@ async def equip_item(callback: types.CallbackQuery):
     await callback.answer(f"✅ {item['name']} надето!", show_alert=True)
     await item_action_menu(callback)
 
+# ==================== 🔧 НОВАЯ ФУНКЦИЯ: СНЯТИЕ ЭКИПИРОВКИ ====================
+
+@dp.callback_query(F.data.startswith("unequip_"))
+async def unequip_item(callback: types.CallbackQuery):
+    """✅ Снимает экипировку и пересчитывает статы"""
+    player = db.get_player(callback.from_user.id)
+    if not player: await callback.answer("❌ Создай персонажа!", show_alert=True); return
+    item_id = callback.data.split("_", 1)[1]
+    # Находим слот, в котором экипирован предмет
+    equipment = player.get("equipment", {})
+    slot_to_remove = None
+    for slot, eid in equipment.items():
+        if eid == item_id:
+            slot_to_remove = slot
+            break
+    if not slot_to_remove:
+        await callback.answer("⚠️ Предмет не экипирован!", show_alert=True); return
+    # Снимаем предмет
+    del equipment[slot_to_remove]
+    db.update_player(callback.from_user.id, equipment=equipment)
+    # ✅ Пересчитываем ВСЕ статы с нуля
+    updated_player = db.get_player(callback.from_user.id)
+    new_stats = db.recalc_all_stats(updated_player, SHOP_ITEMS)
+    db.update_player(callback.from_user.id, **{k: new_stats[k] for k in ["strength", "vitality", "agility", "intelligence", "skill_points", "phys_atk", "stealth_atk", "evasion", "phys_def", "magic_def", "magic_atk", "max_hp", "max_mp", "hp", "mp"]})
+    item = next((i for cat in SHOP_ITEMS.values() for i in cat if i["id"] == item_id), None)
+    db.add_log(callback.from_user.id, "unequip_item", f"Снял {item['name'] if item else item_id}")
+    await callback.answer(f"🔻 {item['name'] if item else item_id} снято!", show_alert=True)
+    await item_action_menu(callback)
+
+@dp.callback_query(F.data.startswith("unequip_all_"))
+async def unequip_all_category(callback: types.CallbackQuery):
+    """Снимает всю экипировку в категории"""
+    player = db.get_player(callback.from_user.id)
+    if not player: await callback.answer("❌ Создай персонажа!", show_alert=True); return
+    category = callback.data.split("_", 2)[2]
+    slot_prefix = {"weapons": "weapon", "armor": "armor", "accessories": "accessory"}.get(category)
+    if not slot_prefix: await callback.answer("❌ Ошибка категории!", show_alert=True); return
+    equipment = player.get("equipment", {})
+    removed = []
+    for slot in list(equipment.keys()):
+        if slot.startswith(slot_prefix):
+            item_id = equipment[slot]
+            item_name = next((i["name"] for cat in SHOP_ITEMS.values() for i in cat if i["id"] == item_id), item_id)
+            del equipment[slot]
+            removed.append(item_name)
+    if not removed:
+        await callback.answer("⚠️ Нечего снимать!", show_alert=True); return
+    db.update_player(callback.from_user.id, equipment=equipment)
+    # Пересчитываем статы
+    updated_player = db.get_player(callback.from_user.id)
+    new_stats = db.recalc_all_stats(updated_player, SHOP_ITEMS)
+    db.update_player(callback.from_user.id, **{k: new_stats[k] for k in ["strength", "vitality", "agility", "intelligence", "skill_points", "phys_atk", "stealth_atk", "evasion", "phys_def", "magic_def", "magic_atk", "max_hp", "max_mp", "hp", "mp"]})
+    db.add_log(callback.from_user.id, "unequip_all", f"Снял: {', '.join(removed)}")
+    await callback.answer(f"🔻 Снято: {', '.join(removed)}!", show_alert=True)
+    await show_inventory_category(callback)
+
+# ==================== 🔧 ПРОДАЖА С ПЕРЕРАСЧЁТОМ СТАТОВ ====================
+
 @dp.callback_query(F.data.startswith("sell_"))
 async def sell_item(callback: types.CallbackQuery):
+    """✅ ИСПРАВЛЕНО: если предмет экипирован — снимаем его и пересчитываем статы"""
     player = db.get_player(callback.from_user.id)
     if not player: await callback.answer("❌ Создай персонажа!", show_alert=True); return
     item_id = callback.data.split("_", 1)[1]
@@ -303,71 +375,67 @@ async def sell_item(callback: types.CallbackQuery):
     if item_id not in inv or inv[item_id] < 1: await callback.answer("❌ Нет предмета!", show_alert=True); return
     item = next((i for cat in SHOP_ITEMS.values() for i in cat if i["id"] == item_id), None)
     if not item: await callback.answer("❌ Предмет не найден!", show_alert=True); return
+    
+    # ✅ ПРОВЕРКА: если предмет экипирован — снимаем его перед продажей!
+    equipment = player.get("equipment", {})
+    equipped_slot = None
+    for slot, eid in equipment.items():
+        if eid == item_id:
+            equipped_slot = slot
+            break
+    if equipped_slot:
+        # Снимаем предмет из экипировки
+        del equipment[equipped_slot]
+        db.update_player(callback.from_user.id, equipment=equipment)
+        logger.info(f"🔻 Снят экипированный предмет {item_id} перед продажей")
+    
     price = item["price"] // 2
     inv[item_id] -= 1
-    if inv[item_id] <= 0: del inv[item_id]
+    if inv[item_id] <= 0:
+        del inv[item_id]
+    
+    # ✅ Обновляем инвентарь, золото и ПЕРЕРАСЧИТЫВАЕМ статы
     db.update_player(callback.from_user.id, inventory=inv, gold=player["gold"] + price)
+    
+    # ✅ Пересчитываем ВСЕ статы после изменения инвентаря/экипировки
+    updated_player = db.get_player(callback.from_user.id)
+    new_stats = db.recalc_all_stats(updated_player, SHOP_ITEMS)
+    db.update_player(callback.from_user.id, **{k: new_stats[k] for k in ["strength", "vitality", "agility", "intelligence", "skill_points", "phys_atk", "stealth_atk", "evasion", "phys_def", "magic_def", "magic_atk", "max_hp", "max_mp", "hp", "mp"]})
+    
     db.add_log(callback.from_user.id, "sell_item", f"Продал {item['name']} за 💰{price}")
     await callback.answer(f"✅ Продано: {item['name']} за 💰{price}!", show_alert=True)
     await show_inventory_category(callback)
 
-# ==================== 🔧 МАГАЗИН — ИСПРАВЛЕННЫЙ ====================
+# ==================== МАГАЗИН ====================
 @dp.callback_query(F.data == "shop")
 async def show_shop(callback: types.CallbackQuery):
     await edit_safe(callback.message, text="🏪 Магазин\n\nВыбери категорию:", reply_markup=shop_kb(), parse_mode="HTML")
 
 @dp.callback_query(F.data.startswith("shop_"))
 async def show_shop_category(callback: types.CallbackQuery):
-    """Показывает товары категории — используется после покупки"""
     cat_map = {"shop_potions": "potions", "shop_weapons": "weapons", "shop_armor": "armor", "shop_accessories": "accessories", "shop_other": "other"}
-    category = cat_map.get(callback.data, "potions")
-    items = SHOP_ITEMS.get(category, [])
+    category = cat_map.get(callback.data, "potions"); items = SHOP_ITEMS.get(category, [])
     kb = [[InlineKeyboardButton(text=f"{item['name']} {item['effect']} 💰{item['price']}", callback_data=f"buy_{category}_{item['id']}")] for item in items]
     kb.append([InlineKeyboardButton(text="🔙 Назад", callback_data="shop")])
     await edit_safe(callback.message, text=f"🏪 {category.title()}\n\n<i>Нажми для покупки:</i>", reply_markup=InlineKeyboardMarkup(inline_keyboard=kb), parse_mode="HTML")
 
 @dp.callback_query(F.data.startswith("buy_"))
 async def buy_item(callback: types.CallbackQuery):
-    """✅ ИСПРАВЛЕНО: после покупки остаёмся в той же категории"""
-    uid = callback.from_user.id
-    # ✅ Разбиваем callback_data: buy_weapons_sword_apprentice → ["buy", "weapons", "sword_apprentice"]
-    parts = callback.data.split("_", 2)
-    if len(parts) != 3:
-        await callback.answer("❌ Ошибка формата!", show_alert=True); return
+    uid = callback.from_user.id; parts = callback.data.split("_", 2)
+    if len(parts) != 3: await callback.answer("❌ Ошибка формата!", show_alert=True); return
     category, item_id = parts[1], parts[2]
-    
     player = db.get_player(uid)
     if not player: await callback.answer("❌ Персонаж не найден!", show_alert=True); return
-    
-    # Ищем предмет в указанной категории
-    item = None
-    for i in SHOP_ITEMS.get(category, []):
-        if i["id"] == item_id:
-            item = i
-            break
-    if not item:
-        await callback.answer(f"❌ Предмет не найден: {item_id}", show_alert=True); return
-    
-    current_gold = int(player.get("gold", 0))
-    item_price = int(item.get("price", 0))
-    
-    if current_gold < item_price:
-        await callback.answer(f"❌ Нужно 💰{item_price}, у вас 💰{current_gold}", show_alert=True); return
-    
-    if not db.spend_gold(uid, item_price):
-        await callback.answer("❌ Ошибка списания!", show_alert=True); return
-    
+    item = next((i for i in SHOP_ITEMS.get(category, []) if i["id"] == item_id), None)
+    if not item: await callback.answer(f"❌ Предмет не найден: {item_id}", show_alert=True); return
+    if player["gold"] < item["price"]: await callback.answer(f"❌ Нужно 💰{item['price']}, у вас 💰{player['gold']}", show_alert=True); return
+    if not db.spend_gold(uid, item["price"]): await callback.answer("❌ Ошибка списания!", show_alert=True); return
     inv = player.get("inventory", {}); inv[item_id] = inv.get(item_id, 0) + 1
-    db.update_player(uid, inventory=inv)
-    db.add_log(uid, "buy_item", f"Купил {item['name']}")
-    
+    db.update_player(uid, inventory=inv); db.add_log(uid, "buy_item", f"Купил {item['name']}")
     await callback.answer(f"✅ Куплено: {item['name']}!", show_alert=True)
-    
-    # ✅ ГЛАВНОЕ ИСПРАВЛЕНИЕ: показываем ТОТУ ЖЕ категорию, а не зелья!
     await show_shop_category_by_name(callback, category)
 
 async def show_shop_category_by_name(callback: types.CallbackQuery, category: str):
-    """Показывает товары по имени категории — для возврата после покупки"""
     items = SHOP_ITEMS.get(category, [])
     kb = [[InlineKeyboardButton(text=f"{item['name']} {item['effect']} 💰{item['price']}", callback_data=f"buy_{category}_{item['id']}")] for item in items]
     kb.append([InlineKeyboardButton(text="🔙 Назад", callback_data="shop")])
