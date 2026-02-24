@@ -30,104 +30,39 @@ class BattleState(StatesGroup):
 
 # ==================== ДАННЫЕ ИГРЫ ====================
 RACES = {
-    "human": {"name": "🧑 Человек", "bonus": "+3 очка навыка", "magic": "✨ Благословение"},
-    "elf": {"name": "🧝 Эльф", "bonus": "+3 Ловкость", "magic": "🌿 Природа: Уклон +15%"},
-    "dwarf": {"name": "🧔 Гном", "bonus": "+3 Сила", "magic": "🪨 Каменная кожа"},
-    "orc": {"name": "👹 Орк", "bonus": "+3 Живучесть", "magic": "🔥 Ярость при HP<50%"},
-    "fallen": {"name": "💀 Падший", "bonus": "+1 Ловк, +2 Инт", "magic": "👻 Тень: скрытный удар"}
-}
-
-RACE_MAGIC = {
-    "human": {
-        "name": "✨ Благословение",
-        "description": "+10% к лечению",
-        "type": "passive",  # пассивная
-        "effect": "heal_bonus_10"  # эффект
-    },
-    "elf": {
-        "name": "🌿 Природа",
-        "description": "Уклонение +15%",
-        "type": "passive",
-        "effect": "evasion_15"
-    },
-    "dwarf": {
-        "name": "🪨 Каменная кожа",
-        "description": "+5 Физ.защ",
-        "type": "passive",
-        "effect": "phys_def_5"
-    },
-    "orc": {
-        "name": "🔥 Ярость",
-        "description": "+10% урона при HP<50%",
-        "type": "passive",
-        "effect": "rage_damage_10"
-    },
-    "fallen": {
-        "name": "👻 Тень",
-        "description": "Первый удар скрытный",
-        "type": "passive",
-        "effect": "first_strike_stealth"
-    }
+    "human": {"name": "🧑 Человек", "bonus": "+3 очка навыка", "magic": "✨ Благословение: +10% к лечению"},
+    "elf": {"name": "🧝 Эльф", "bonus": "+3 Ловкость", "magic": "🌿 Природа: Уклонение +15%"},
+    "dwarf": {"name": "🧔 Гном", "bonus": "+3 Сила", "magic": "🪨 Каменная кожа: +5 Физ.защ"},
+    "orc": {"name": "👹 Орк", "bonus": "+3 Живучесть", "magic": "🔥 Ярость: +10% урона при HP<50%"},
+    "fallen": {"name": "💀 Падший", "bonus": "+1 Ловк, +2 Инт", "magic": "👻 Тень: Первый удар скрытный"}
 }
 
 CLASSES = {
-    "warrior": {"name": "⚔️ Воин", "bonus": "+1 Сила, +1 Жив", "magic": "🗡️ Клич: +5 Физ.АТК"},
-    "archer": {"name": "🏹 Лучник", "bonus": "+2 Ловкость", "magic": "🎯 Точный выстрел"},
-    "wizard": {"name": "🔮 Волшебник", "bonus": "+2 Интеллект", "magic": "🛡️ Маг.щит"},
-    "bard": {"name": "🎭 Бард", "bonus": "+1 Инт, +1 Ловк", "magic": "🎵 Вдохновение"},
-    "paladin": {"name": "🛡️ Паладин", "bonus": "+1 Сила, +1 Инт", "magic": "✨ Святой свет"},
-    "necromancer": {"name": "💀 Некромант", "bonus": "+1 Инт, +1 Жив", "magic": "☠️ Призыв"}
+    "warrior": {"name": "⚔️ Воин", "bonus": "+1 Сила, +1 Жив", "magic": "🗡️ Воинский клич: +5 Физ.АТК"},
+    "archer": {"name": "🏹 Лучник", "bonus": "+2 Ловкость", "magic": "🎯 Точный выстрел: Игнор 5 защиты"},
+    "wizard": {"name": "🔮 Волшебник", "bonus": "+2 Интеллект", "magic": "🛡️ Маг.щит: +10 Маг.защ"},
+    "bard": {"name": "🎭 Бард", "bonus": "+1 Инт, +1 Ловк", "magic": "🎵 Вдохновение: +2 ко всем статам"},
+    "paladin": {"name": "🛡️ Паладин", "bonus": "+1 Сила, +1 Инт", "magic": "✨ Святой свет: Лечение +20 HP"},
+    "necromancer": {"name": "💀 Некромант", "bonus": "+1 Инт, +1 Жив", "magic": "☠️ Поднять скелета: Призыв"}
 }
 
+# ==================== МАГИЯ РАС ====================
+RACE_MAGIC = {
+    "human": {"name": "✨ Благословение", "description": "+10% к лечению", "type": "passive", "effect": "heal_bonus_10"},
+    "elf": {"name": "🌿 Природа", "description": "Уклонение +15%", "type": "passive", "effect": "evasion_15"},
+    "dwarf": {"name": "🪨 Каменная кожа", "description": "+5 Физ.защ", "type": "passive", "effect": "phys_def_5"},
+    "orc": {"name": "🔥 Ярость", "description": "+10% урона при HP<50%", "type": "passive", "effect": "rage_damage_10"},
+    "fallen": {"name": "👻 Тень", "description": "Первый удар скрытный", "type": "passive", "effect": "first_strike_stealth"}
+}
+
+# ==================== МАГИЯ КЛАССОВ ====================
 CLASS_MAGIC = {
-    "warrior": {
-        "name": "🗡️ Воинский клич",
-        "description": "+5 Физ.АТК на 1 ход",
-        "type": "active",
-        "mp_cost": 5,
-        "effect": "phys_atk_buff_5",
-        "duration": 1  # ходов
-    },
-    "archer": {
-        "name": "🎯 Точный выстрел",
-        "description": "Игнорирует 5 защиты",
-        "type": "active",
-        "mp_cost": 5,
-        "effect": "ignore_def_5",
-        "duration": 1
-    },
-    "wizard": {
-        "name": "🛡️ Магический щит",
-        "description": "+10 Маг.защ на 1 ход",
-        "type": "active",
-        "mp_cost": 5,
-        "effect": "magic_def_buff_10",
-        "duration": 1
-    },
-    "bard": {
-        "name": "🎵 Вдохновение",
-        "description": "+2 ко всем характеристикам на 1 ход",
-        "type": "active",
-        "mp_cost": 10,
-        "effect": "all_stats_buff_2",
-        "duration": 1
-    },
-    "paladin": {
-        "name": "✨ Святой свет",
-        "description": "Лечение +20 HP",
-        "type": "active",
-        "mp_cost": 10,
-        "effect": "heal_20",
-        "duration": 0  # мгновенное
-    },
-    "necromancer": {
-        "name": "☠️ Поднять скелета",
-        "description": "Призыв помощника (урон +10)",
-        "type": "active",
-        "mp_cost": 15,
-        "effect": "summon_skeleton",
-        "duration": 3  # 3 хода
-    }
+    "warrior": {"name": "🗡️ Воинский клич", "description": "+5 Физ.АТК на 1 ход", "type": "active", "mp_cost": 5, "effect": "phys_atk_buff_5", "duration": 1},
+    "archer": {"name": "🎯 Точный выстрел", "description": "Игнорирует 5 защиты", "type": "active", "mp_cost": 5, "effect": "ignore_def_5", "duration": 1},
+    "wizard": {"name": "🛡️ Магический щит", "description": "+10 Маг.защ на 1 ход", "type": "active", "mp_cost": 5, "effect": "magic_def_buff_10", "duration": 1},
+    "bard": {"name": "🎵 Вдохновение", "description": "+2 ко всем характеристикам на 1 ход", "type": "active", "mp_cost": 10, "effect": "all_stats_buff_2", "duration": 1},
+    "paladin": {"name": "✨ Святой свет", "description": "Лечение +20 HP", "type": "active", "mp_cost": 10, "effect": "heal_20", "duration": 0},
+    "necromancer": {"name": "☠️ Поднять скелета", "description": "Призыв помощника (урон +10)", "type": "active", "mp_cost": 15, "effect": "summon_skeleton", "duration": 3}
 }
 
 SHOP_ITEMS = {
@@ -209,6 +144,7 @@ def main_menu_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="👤 Мой персонаж", callback_data="my_character")],
         [InlineKeyboardButton(text="⭐️ Навыки", callback_data="skills")],
+        [InlineKeyboardButton(text="✨ Способности", callback_data="abilities")],
         [InlineKeyboardButton(text="🎒 Инвентарь", callback_data="inventory")],
         [InlineKeyboardButton(text="🏪 Магазин", callback_data="shop")],
         [InlineKeyboardButton(text="⚔️ Бой", callback_data="battle_menu")],
@@ -229,10 +165,10 @@ def class_kb():
 
 def skills_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="+1 💪 Сила = ⚔️ Физ.АТК +4", callback_data="skill_strength")],
-        [InlineKeyboardButton(text="+1 ⚡ Ловкость = ⚡ Скр.АТК +8", callback_data="skill_agility")],
-        [InlineKeyboardButton(text="+1 ❤️ Живучесть = ❤️ HP +10", callback_data="skill_vitality")],
-        [InlineKeyboardButton(text="+1 🧠 Интеллект = 🔮 Маг.АТК +4", callback_data="skill_intelligence")],
+        [InlineKeyboardButton(text="💪 +1 Сила = ⚔️ Физ.АТК +4", callback_data="skill_strength")],
+        [InlineKeyboardButton(text="⚡ +1 Ловкость = ⚡ Скр.АТК +8, 🛡️ Уклон +3", callback_data="skill_agility")],
+        [InlineKeyboardButton(text="❤️ +1 Живучесть = ❤️ HP +10, 🛡️ Ф/М.Защ +1", callback_data="skill_vitality")],
+        [InlineKeyboardButton(text="🧠 +1 Интеллект = 💙 MP +3, 🔮 Маг.АТК +4", callback_data="skill_intelligence")],
         [InlineKeyboardButton(text="🔙 Назад", callback_data="main_menu")],
     ])
 
@@ -290,7 +226,7 @@ def magic_levels_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="📊 Уровень 5", callback_data="magic_5")],
         [InlineKeyboardButton(text="📊 Уровень 15", callback_data="magic_15")],
-        [InlineKeyboardButton(text="🔙 Назад", callback_data="main_menu")],
+        [InlineKeyboardButton(text="🔙 Назад", callback_data="magic_tower")],
     ])
 
 # ==================== ХЕНДЛЕРЫ ====================
@@ -317,7 +253,7 @@ async def set_name(message: types.Message, state: FSMContext):
 async def set_race(callback: types.CallbackQuery, state: FSMContext):
     race = callback.data.split("_")[1]
     await state.update_data(race=race)
-    await callback.message.edit_text(f"✅ Раса: {RACES[race]['name']}\n\nВыбери класс:", reply_markup=class_kb(), parse_mode="HTML")
+    await callback.message.edit_text(f"✅ Раса: {RACES[race]['name']}\n{RACES[race]['magic']}\n\nВыбери класс:", reply_markup=class_kb(), parse_mode="HTML")
     await state.set_state(CharacterCreation.class_type)
 
 @dp.callback_query(CharacterCreation.class_type, F.data.startswith("class_"))
@@ -326,7 +262,19 @@ async def set_class(callback: types.CallbackQuery, state: FSMContext):
     class_type = callback.data.split("_")[1]
     db.create_player(callback.from_user.id, callback.from_user.username or "Hero", data["name"], data["race"], class_type)
     await state.clear()
-    await callback.message.edit_text(f"🎉 Герой создан!\n\n👤 {data['name']} | {RACES[data['race']]['name']} | {CLASSES[class_type]['name']}", reply_markup=main_menu_kb(), parse_mode="HTML")
+    
+    race_magic = RACE_MAGIC.get(data["race"], {})
+    class_magic = CLASS_MAGIC.get(class_type, {})
+    
+    text = (
+        f"🎉 <b>Герой создан!</b>\n\n"
+        f"👤 {data['name']}\n"
+        f"🧬 {RACES[data['race']]['name']} | {CLASSES[class_type]['name']}\n"
+        f"✨ {race_magic.get('name', '')}: {race_magic.get('description', '')}\n"
+        f"⚔️ {class_magic.get('name', '')}: {class_magic.get('description', '')}\n\n"
+        f"Твоё приключение начинается!"
+    )
+    await callback.message.edit_text(text, reply_markup=main_menu_kb(), parse_mode="HTML")
 
 @dp.callback_query(F.data == "my_character")
 async def show_character(callback: types.CallbackQuery):
@@ -334,7 +282,50 @@ async def show_character(callback: types.CallbackQuery):
     if not player:
         await callback.answer("❌ Создай персонажа!", show_alert=True)
         return
-    text = f"👤 <b>{player['name']}</b>\n❤️ HP: {player['hp']}/{player['max_hp']}\n💰 Золото: {player['gold']}\n⚔️ Физ.АТК: {player['phys_atk']}\n⭐️ Очки навыков: {player['skill_points']}"
+    
+    exp_needed = player["level"] * 100
+    exp_left = exp_needed - player["exp"]
+    
+    race_magic = RACE_MAGIC.get(player["race"], {})
+    class_magic = CLASS_MAGIC.get(player["class_type"], {})
+    
+    equip_text = ""
+    if player["equipment"]:
+        for slot, item in player["equipment"].items():
+            equip_text += f"• {slot}: {item}\n"
+    else:
+        equip_text = "• Пусто\n"
+    
+    magic_text = (
+        f"📜 <b>СПОСОБНОСТИ:</b>\n"
+        f"✨ Раса: {race_magic.get('name', 'Нет')} - {race_magic.get('description', '')}\n"
+        f"⚔️ Класс: {class_magic.get('name', 'Нет')} - {class_magic.get('description', '')} (MP: {class_magic.get('mp_cost', 0)})\n\n"
+    )
+    
+    text = (
+        f"👤 <b>{player['name']}</b>\n"
+        f"🧬 {RACES[player['race']]['name']} | {CLASSES[player['class_type']]['name']}\n"
+        f"📊 Уровень: {player['level']}\n"
+        f"❤️ HP: {player['hp']}/{player['max_hp']} | 💙 MP: {player['mp']}/{player['max_mp']}\n"
+        f"✨ Опыт: {player['exp']}/{exp_needed} (осталось {exp_left})\n"
+        f"💰 Золото: {player['gold']}\n\n"
+        f"📊 <b>БОЕВЫЕ ХАРАКТЕРИСТИКИ:</b>\n"
+        f"⚔️ Физ.АТК: {player['phys_atk']}\n"
+        f"⚡️ Скр.АТК: {player['stealth_atk']}\n"
+        f"🛡️ Уклонение: {player['evasion']}\n"
+        f"🛡️ Физ.Защ: {player['phys_def']}\n"
+        f"🔮 Маг.Защ: {player['magic_def']}\n"
+        f"🔮 Маг.АТК: {player['magic_atk']}\n\n"
+        f"📈 <b>БАЗОВЫЕ НАВЫКИ:</b>\n"
+        f"💪 Сила: {player['strength']}\n"
+        f"❤️ Живучесть: {player['vitality']}\n"
+        f"⚡️ Ловкость: {player['agility']}\n"
+        f"🧠 Интеллект: {player['intelligence']}\n"
+        f"⭐️ Очки навыков: {player['skill_points']}\n\n"
+        f"{magic_text}"
+        f"🎒 <b>ЭКИПИРОВКА:</b>\n{equip_text}"
+    )
+    
     await callback.message.edit_text(text, reply_markup=main_menu_kb(), parse_mode="HTML")
 
 @dp.callback_query(F.data == "skills")
@@ -343,7 +334,18 @@ async def show_skills(callback: types.CallbackQuery):
     if not player:
         await callback.answer("❌ Создай персонажа!", show_alert=True)
         return
-    await callback.message.edit_text(f"⭐️ Навыки\n\nОчки: {player['skill_points']}", reply_markup=skills_kb(), parse_mode="HTML")
+    text = (
+        f"⭐️ <b>Прокачка навыков</b>\n\n"
+        f"👤 {player['name']} | Уровень: {player['level']}\n"
+        f"⭐️ Доступно очков: <b>{player['skill_points']}</b>\n\n"
+        f"<b>Эффекты:</b>\n"
+        f"💪 +1 Сила → ⚔️ Физ.АТК +4\n"
+        f"⚡ +1 Ловкость → ⚡ Скр.АТК +8, 🛡️ Уклон +3\n"
+        f"❤️ +1 Живучесть → ❤️ HP +10, 🛡️ Ф/М.Защ +1\n"
+        f"🧠 +1 Интеллект → 💙 MP +3, 🔮 Маг.АТК +4\n\n"
+        f"<i>Нажми на кнопку:</i>"
+    )
+    await callback.message.edit_text(text, reply_markup=skills_kb(), parse_mode="HTML")
 
 @dp.callback_query(F.data.startswith("skill_"))
 async def upgrade_skill(callback: types.CallbackQuery):
@@ -353,13 +355,43 @@ async def upgrade_skill(callback: types.CallbackQuery):
         return
     skill = callback.data.split("_")[1]
     updates = {"skill_points": player["skill_points"] - 1}
-    if skill == "strength": updates.update({"strength": player["strength"]+1, "phys_atk": player["phys_atk"]+4})
-    elif skill == "agility": updates.update({"agility": player["agility"]+1, "stealth_atk": player["stealth_atk"]+8, "evasion": player["evasion"]+3})
-    elif skill == "vitality": updates.update({"vitality": player["vitality"]+1, "max_hp": player["max_hp"]+10, "hp": player["hp"]+10, "phys_def": player["phys_def"]+1, "magic_def": player["magic_def"]+1})
-    elif skill == "intelligence": updates.update({"intelligence": player["intelligence"]+1, "max_mp": player["max_mp"]+3, "mp": player["mp"]+3, "magic_atk": player["magic_atk"]+4})
+    if skill == "strength":
+        updates.update({"strength": player["strength"]+1, "phys_atk": player["phys_atk"]+4})
+    elif skill == "agility":
+        updates.update({"agility": player["agility"]+1, "stealth_atk": player["stealth_atk"]+8, "evasion": player["evasion"]+3})
+    elif skill == "vitality":
+        updates.update({"vitality": player["vitality"]+1, "max_hp": player["max_hp"]+10, "hp": player["hp"]+10, "phys_def": player["phys_def"]+1, "magic_def": player["magic_def"]+1})
+    elif skill == "intelligence":
+        updates.update({"intelligence": player["intelligence"]+1, "max_mp": player["max_mp"]+3, "mp": player["mp"]+3, "magic_atk": player["magic_atk"]+4})
     db.update_player(callback.from_user.id, **updates)
-    await callback.answer(f"✅ {skill} прокачан!", show_alert=True)
+    db.add_log(callback.from_user.id, "upgrade_skill", f"{skill} +1")
+    await callback.answer(f"✅ Навык прокачан!", show_alert=True)
     await show_skills(callback)
+
+@dp.callback_query(F.data == "abilities")
+async def show_abilities(callback: types.CallbackQuery):
+    player = db.get_player(callback.from_user.id)
+    if not player:
+        await callback.answer("❌ Создай персонажа!", show_alert=True)
+        return
+    race_magic = RACE_MAGIC.get(player["race"], {})
+    class_magic = CLASS_MAGIC.get(player["class_type"], {})
+    ability_kb = []
+    if class_magic.get("type") == "active":
+        ability_kb.append([InlineKeyboardButton(text=f"⚔️ {class_magic['name']} (-{class_magic['mp_cost']} MP)", callback_data="use_class_magic")])
+    ability_kb.append([InlineKeyboardButton(text="🔙 Назад", callback_data="main_menu")])
+    text = (
+        f"✨ <b>СПОСОБНОСТИ</b>\n\n"
+        f"👤 {player['name']} | 💙 MP: {player['mp']}/{player['max_mp']}\n\n"
+        f"📜 <b>РАСОВАЯ МАГИЯ</b> (пассивная)\n"
+        f"{race_magic.get('name', 'Нет')}: {race_magic.get('description', 'Нет')}\n"
+        f"💡 Работает автоматически\n\n"
+        f"⚔️ <b>КЛАССОВАЯ МАГИЯ</b> (активная)\n"
+        f"{class_magic.get('name', 'Нет')}: {class_magic.get('description', 'Нет')}\n"
+        f"💰 Стоимость: {class_magic.get('mp_cost', 0)} MP\n"
+        f"⏱️ Длительность: {class_magic.get('duration', 0)} ход(а)"
+    )
+    await callback.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=ability_kb), parse_mode="HTML")
 
 @dp.callback_query(F.data == "inventory")
 async def show_inventory(callback: types.CallbackQuery):
@@ -406,64 +438,6 @@ async def battle_menu(callback: types.CallbackQuery):
 @dp.callback_query(F.data == "battle_pve")
 async def select_monster(callback: types.CallbackQuery):
     await callback.message.edit_text("👹 Выбери сложность", reply_markup=pve_monsters_kb(), parse_mode="HTML")
-
-@dp.callback_query(F.data.startswith("monster_"))
-async def start_battle(callback: types.CallbackQuery, state: FSMContext):
-    player = db.get_player(callback.from_user.id)
-    if not player:
-        await callback.answer("❌ Создай персонажа!", show_alert=True)
-        return
-    tier = callback.data.split("_")[1]
-    monster = MONSTERS["titan"] if tier == "titan" else random.choice(MONSTERS.get(tier, MONSTERS["weak"]))
-    await state.update_data(battle={"player": player, "enemy": monster, "enemy_hp": monster["hp"]})
-    await callback.message.edit_text(f"⚔️ БОЙ!\n\n👤 {player['name']} ❤️{player['hp']}\n🆚\n👹 {monster['name']} ❤️{monster['hp']}\n\n<i>Нажми ⚔️ Атака:</i>", reply_markup=battle_action_kb(), parse_mode="HTML")
-
-@dp.callback_query(F.data.startswith("battle_"))
-async def battle_action(callback: types.CallbackQuery, state: FSMContext):
-    action = callback.data.split("_")[1]
-    data = await state.get_data()
-    battle = data.get("battle", {})
-    if not battle:
-        await callback.answer("❌ Начни бой сначала", show_alert=True)
-        return
-    player, enemy, enemy_hp = battle["player"], battle["enemy"], battle["enemy_hp"]
-    
-    if action == "surrender":
-        db.update_player(callback.from_user.id, gold=0, hp=player["max_hp"])
-        await callback.message.edit_text("🏳️ Сдался. 💰 Золото потеряно. ❤️ HP восстановлено.", reply_markup=main_menu_kb(), parse_mode="HTML")
-        await state.clear()
-        return
-    
-    if action == "attack":
-        player_dmg = max(1, player["phys_atk"] - enemy["phys_def"] + random.randint(1, 20))
-        enemy_hp -= player_dmg
-        if enemy_hp <= 0:
-            db.update_player(callback.from_user.id, exp=player["exp"]+enemy["exp"], gold=player["gold"]+enemy["gold"])
-            await callback.message.edit_text(f"🏆 ПОБЕДА!\n✨ +{enemy['exp']} опыта\n💰 +{enemy['gold']} золота", reply_markup=main_menu_kb(), parse_mode="HTML")
-            await state.clear()
-            return
-        enemy_dmg = max(1, enemy["phys_atk"] - player["phys_def"] + random.randint(1, 20))
-        new_hp = max(0, player["hp"] - enemy_dmg)
-        if new_hp <= 0:
-            db.update_player(callback.from_user.id, gold=0, hp=player["max_hp"])
-            await callback.message.edit_text("💀 ПОРАЖЕНИЕ!\n💰 Золото потеряно.\n❤️ HP восстановлено.", reply_markup=main_menu_kb(), parse_mode="HTML")
-            await state.clear()
-            return
-        battle["enemy_hp"], battle["player"]["hp"] = enemy_hp, new_hp
-        await state.update_data(battle=battle)
-        await callback.message.edit_text(f"⚔️ Ты: -{player_dmg} | Враг: -{enemy_dmg}\n👤 {new_hp} | 👹 {enemy_hp}", reply_markup=battle_action_kb(), parse_mode="HTML")
-        return
-    
-    if action == "potion":
-        inv = player.get("inventory", {})
-        if "hp_small" not in inv or inv["hp_small"] < 1:
-            await callback.answer("❌ Нет зелий!", show_alert=True)
-            return
-        new_hp = min(player["max_hp"], player["hp"] + 30)
-        inv["hp_small"] -= 1
-        db.update_player(callback.from_user.id, hp=new_hp, inventory=inv)
-        await callback.answer(f"🧪 +30 HP! ❤️ {new_hp}", show_alert=True)
-        return
 
 @dp.callback_query(F.data == "cards_menu")
 async def cards_menu(callback: types.CallbackQuery):
@@ -538,7 +512,6 @@ async def back_main(callback: types.CallbackQuery):
 
 # ==================== WEBHOOK ЗАПУСК ====================
 async def on_startup(app):
-    """Устанавливает webhook при запуске"""
     webhook_url = os.getenv("RAILWAY_PUBLIC_DOMAIN") or os.getenv("RENDER_EXTERNAL_URL")
     if webhook_url:
         webhook_url = webhook_url.replace("http://", "https://").rstrip("/")
@@ -546,13 +519,11 @@ async def on_startup(app):
         logging.info(f"✅ Webhook установлен: {webhook_url}/webhook")
 
 async def on_shutdown(app):
-    """Удаляет webhook при остановке"""
     await bot.delete_webhook()
     await bot.session.close()
-    logging.info("✅ Webhook удалён, сессия закрыта")
+    logging.info("✅ Webhook удалён")
 
 async def webhook_handler(request):
-    """Обрабатывает входящие обновления от Telegram"""
     try:
         update = types.Update(**await request.json())
         await dp.feed_update(bot, update)
@@ -562,14 +533,12 @@ async def webhook_handler(request):
         return web.Response(status=400)
 
 def create_app():
-    """Создаёт aiohttp приложение для webhook"""
     app = web.Application()
     app.router.add_post("/webhook", webhook_handler)
     app.on_startup.append(on_startup)
     app.on_shutdown.append(on_shutdown)
     return app
 
-# Точка входа
 def main():
     app = create_app()
     setup_application(app, dp, bot=bot)
