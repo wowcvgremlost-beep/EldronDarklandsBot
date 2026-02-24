@@ -37,6 +37,39 @@ RACES = {
     "fallen": {"name": "💀 Падший", "bonus": "+1 Ловк, +2 Инт", "magic": "👻 Тень: скрытный удар"}
 }
 
+RACE_MAGIC = {
+    "human": {
+        "name": "✨ Благословение",
+        "description": "+10% к лечению",
+        "type": "passive",  # пассивная
+        "effect": "heal_bonus_10"  # эффект
+    },
+    "elf": {
+        "name": "🌿 Природа",
+        "description": "Уклонение +15%",
+        "type": "passive",
+        "effect": "evasion_15"
+    },
+    "dwarf": {
+        "name": "🪨 Каменная кожа",
+        "description": "+5 Физ.защ",
+        "type": "passive",
+        "effect": "phys_def_5"
+    },
+    "orc": {
+        "name": "🔥 Ярость",
+        "description": "+10% урона при HP<50%",
+        "type": "passive",
+        "effect": "rage_damage_10"
+    },
+    "fallen": {
+        "name": "👻 Тень",
+        "description": "Первый удар скрытный",
+        "type": "passive",
+        "effect": "first_strike_stealth"
+    }
+}
+
 CLASSES = {
     "warrior": {"name": "⚔️ Воин", "bonus": "+1 Сила, +1 Жив", "magic": "🗡️ Клич: +5 Физ.АТК"},
     "archer": {"name": "🏹 Лучник", "bonus": "+2 Ловкость", "magic": "🎯 Точный выстрел"},
@@ -44,6 +77,57 @@ CLASSES = {
     "bard": {"name": "🎭 Бард", "bonus": "+1 Инт, +1 Ловк", "magic": "🎵 Вдохновение"},
     "paladin": {"name": "🛡️ Паладин", "bonus": "+1 Сила, +1 Инт", "magic": "✨ Святой свет"},
     "necromancer": {"name": "💀 Некромант", "bonus": "+1 Инт, +1 Жив", "magic": "☠️ Призыв"}
+}
+
+CLASS_MAGIC = {
+    "warrior": {
+        "name": "🗡️ Воинский клич",
+        "description": "+5 Физ.АТК на 1 ход",
+        "type": "active",
+        "mp_cost": 5,
+        "effect": "phys_atk_buff_5",
+        "duration": 1  # ходов
+    },
+    "archer": {
+        "name": "🎯 Точный выстрел",
+        "description": "Игнорирует 5 защиты",
+        "type": "active",
+        "mp_cost": 5,
+        "effect": "ignore_def_5",
+        "duration": 1
+    },
+    "wizard": {
+        "name": "🛡️ Магический щит",
+        "description": "+10 Маг.защ на 1 ход",
+        "type": "active",
+        "mp_cost": 5,
+        "effect": "magic_def_buff_10",
+        "duration": 1
+    },
+    "bard": {
+        "name": "🎵 Вдохновение",
+        "description": "+2 ко всем характеристикам на 1 ход",
+        "type": "active",
+        "mp_cost": 10,
+        "effect": "all_stats_buff_2",
+        "duration": 1
+    },
+    "paladin": {
+        "name": "✨ Святой свет",
+        "description": "Лечение +20 HP",
+        "type": "active",
+        "mp_cost": 10,
+        "effect": "heal_20",
+        "duration": 0  # мгновенное
+    },
+    "necromancer": {
+        "name": "☠️ Поднять скелета",
+        "description": "Призыв помощника (урон +10)",
+        "type": "active",
+        "mp_cost": 15,
+        "effect": "summon_skeleton",
+        "duration": 3  # 3 хода
+    }
 }
 
 SHOP_ITEMS = {
