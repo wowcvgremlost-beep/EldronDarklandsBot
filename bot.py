@@ -199,7 +199,6 @@ def magic_levels_kb():
 
 # ==================== УТИЛИТЫ ====================
 async def edit_safe(message, **kwargs):
-    """Безопасное редактирование"""
     try:
         await message.edit_text(**kwargs)
     except Exception as e:
@@ -215,7 +214,6 @@ async def edit_safe(message, **kwargs):
 
 @dp.errors()
 async def global_error_handler(update: types.Update, exception: Exception):
-    """Глобальная обработка ошибок"""
     err = str(exception).lower()
     if any(x in err for x in ["message is not modified", "can't be edited", "not found"]):
         logger.debug(f"⚠️ Игнорирована ошибка: {exception}")
@@ -369,55 +367,36 @@ async def show_inventory(callback: types.CallbackQuery):
 
 @dp.callback_query(F.data.startswith("inv_"))
 async def show_inventory_category(callback: types.CallbackQuery):
-    """Показывает предметы в категории инвентаря"""
     player = db.get_player(callback.from_user.id)
     if not player:
         await callback.answer("❌ Создай персонажа!", show_alert=True)
         return
-    
     cat_map = {"inv_potions": "potions", "inv_weapons": "weapons", "inv_armor": "armor", "inv_accessories": "accessories", "inv_other": "other"}
     category = cat_map.get(callback.data, "potions")
     inv = player["inventory"]
-    
-    items_in_inv = []
-    for item in SHOP_ITEMS.get(category, []):
-        if item["id"] in inv and inv[item["id"]] > 0:
-            items_in_inv.append((item, inv[item["id"]]))
-    
+    items_in_inv = [(item, inv[item["id"]]) for item in SHOP_ITEMS.get(category, []) if item["id"] in inv and inv[item["id"]] > 0]
     kb = []
     for item, count in items_in_inv:
-        equipped = False
-        for slot, item_id in player["equipment"].items():
-            if item_id == item["id"]:
-                equipped = True
-                break
-        if equipped:
-            kb.append([InlineKeyboardButton(text=f"✅ {item['name']} x{count}", callback_data=f"equip_{item['id']}")])
-        else:
-            kb.append([InlineKeyboardButton(text=f"🎒 {item['name']} x{count}", callback_data=f"equip_{item['id']}")])
-    
+        equipped = any(item_id == item["id"] for item_id in player["equipment"].values())
+        kb.append([InlineKeyboardButton(text=f"{'✅' if equipped else '🎒'} {item['name']} x{count}", callback_data=f"equip_{item['id']}")])
     slot_map = {"weapons": "weapon", "armor": "head", "accessories": "accessory"}
     slot = slot_map.get(category)
     if slot and slot in player["equipment"]:
         kb.append([InlineKeyboardButton(text="🔻 Снять", callback_data=f"unequip_{slot}")])
     kb.append([InlineKeyboardButton(text="🔙 Назад", callback_data="inventory")])
-    
     text = f"🎒 {category.title()}\n\n" + ("Нажми для экипировки:" if items_in_inv else "• Пусто")
     await edit_safe(callback.message, text=text, reply_markup=InlineKeyboardMarkup(inline_keyboard=kb), parse_mode="HTML")
 
 @dp.callback_query(F.data.startswith("equip_"))
 async def equip_item(callback: types.CallbackQuery):
-    """Экипировка предмета"""
     player = db.get_player(callback.from_user.id)
     if not player:
         await callback.answer("❌ Создай персонажа!", show_alert=True)
         return
-    
-    item_id = callback.data.split("_")[1]
+    item_id = callback.data.split("_", 1)[1]  # ✅ FIX: split only on first underscore
     if item_id not in player["inventory"] or player["inventory"][item_id] < 1:
         await callback.answer("❌ Нет в инвентаре!", show_alert=True)
         return
-    
     item = None
     item_slot = None
     for cat, items in SHOP_ITEMS.items():
@@ -427,52 +406,37 @@ async def equip_item(callback: types.CallbackQuery):
                 item_slot = i.get("slot")
                 break
         if item: break
-    
     if not item_slot:
         await callback.answer("❌ Неизвестный предмет!", show_alert=True)
         return
-    
     equipment = player["equipment"]
     equipment[item_slot] = item_id
     db.update_player(callback.from_user.id, equipment=equipment)
-    
     updated_player = db.get_player(callback.from_user.id)
     updated_player = db.apply_equipment_bonuses(updated_player, SHOP_ITEMS)
     db.update_player(callback.from_user.id, **{k: updated_player[k] for k in ["strength", "vitality", "agility", "intelligence", "phys_atk", "stealth_atk", "evasion", "phys_def", "magic_def", "magic_atk", "max_hp", "max_mp"]})
-    
     db.add_log(callback.from_user.id, "equip_item", f"Надел {item['name']}")
     await callback.answer(f"✅ {item['name']} надето!", show_alert=True)
     await show_inventory_category(callback)
 
 @dp.callback_query(F.data.startswith("unequip_"))
 async def unequip_item(callback: types.CallbackQuery):
-    """Снятие экипировки"""
     player = db.get_player(callback.from_user.id)
     if not player:
         await callback.answer("❌ Создай персонажа!", show_alert=True)
         return
-    
-    slot = callback.data.split("_")[1]
+    slot = callback.data.split("_", 1)[1]  # ✅ FIX
     if slot not in player["equipment"]:
         await callback.answer("⚠️ Ничего не надето!", show_alert=True)
         return
-    
     item_id = player["equipment"][slot]
-    item_name = item_id
-    for cat, items in SHOP_ITEMS.items():
-        for i in items:
-            if i["id"] == item_id:
-                item_name = i["name"]
-                break
-    
+    item_name = next((i["name"] for cat in SHOP_ITEMS.values() for i in cat if i["id"] == item_id), item_id)
     equipment = player["equipment"]
     del equipment[slot]
     db.update_player(callback.from_user.id, equipment=equipment)
-    
     updated_player = db.get_player(callback.from_user.id)
     updated_player = db.apply_equipment_bonuses(updated_player, SHOP_ITEMS)
     db.update_player(callback.from_user.id, **{k: updated_player[k] for k in ["strength", "vitality", "agility", "intelligence", "phys_atk", "stealth_atk", "evasion", "phys_def", "magic_def", "magic_atk", "max_hp", "max_mp"]})
-    
     db.add_log(callback.from_user.id, "unequip_item", f"Снял {item_name}")
     await callback.answer(f"🔻 {item_name} снято!", show_alert=True)
     await show_inventory_category(callback)
@@ -483,33 +447,34 @@ async def show_shop(callback: types.CallbackQuery):
 
 @dp.callback_query(F.data.startswith("shop_"))
 async def show_shop_category(callback: types.CallbackQuery):
-    """Показывает товары в категории магазина"""
     cat_map = {"shop_potions": "potions", "shop_weapons": "weapons", "shop_armor": "armor", "shop_accessories": "accessories", "shop_other": "other"}
     category = cat_map.get(callback.data, "potions")
     items = SHOP_ITEMS.get(category, [])
-    
-    kb = []
-    for item in items:
-        type_info = f" | Тип {item['type_name']} {item['type_num']}" if item.get('type_num') else f" | Тип {item['type_name']}"
-        kb.append([InlineKeyboardButton(text=f"{item['name']} {item['effect']} 💰{item['price']}", callback_data=f"buy_{item['id']}")])
+    kb = [[InlineKeyboardButton(text=f"{item['name']} {item['effect']} 💰{item['price']}", callback_data=f"buy_{item['id']}")] for item in items]
     kb.append([InlineKeyboardButton(text="🔙 Назад", callback_data="shop")])
-    
     text = f"🏪 {category.title()}\n\n<i>Нажми для покупки:</i>"
     await edit_safe(callback.message, text=text, reply_markup=InlineKeyboardMarkup(inline_keyboard=kb), parse_mode="HTML")
 
 @dp.callback_query(F.data.startswith("buy_"))
 async def buy_item(callback: types.CallbackQuery):
-    """Покупка предмета — ИСПРАВЛЕННАЯ ВЕРСИЯ"""
+    """✅ ИСПРАВЛЕННАЯ ВЕРСИЯ: split('_', 1) для item_id с подчёркиваниями"""
     user_id = callback.from_user.id
-    item_id = callback.data.split("_")[1]
     
-    # 1. Получаем актуальные данные игрока
+    # ✅ FIX: split only on FIRST underscore to handle item IDs like "sword_apprentice"
+    parts = callback.data.split("_", 1)
+    if len(parts) != 2:
+        await callback.answer("❌ Ошибка формата!", show_alert=True)
+        return
+    item_id = parts[1]
+    
+    logger.info(f"🛒 Покупка: user={user_id}, item_id={item_id}")
+    
     player = db.get_player(user_id)
     if not player:
         await callback.answer("❌ Ошибка: персонаж не найден!", show_alert=True)
         return
     
-    # 2. Ищем предмет в магазине
+    # Ищем предмет во ВСЕХ категориях
     item = None
     for category_items in SHOP_ITEMS.values():
         for i in category_items:
@@ -520,43 +485,35 @@ async def buy_item(callback: types.CallbackQuery):
             break
     
     if not item:
-        await callback.answer("❌ Ошибка: предмет не найден!", show_alert=True)
-        logger.error(f"Item {item_id} not found in SHOP_ITEMS")
+        logger.error(f"❌ Item '{item_id}' NOT FOUND in SHOP_ITEMS. Available IDs: {[i['id'] for cat in SHOP_ITEMS.values() for i in cat]}")
+        await callback.answer(f"❌ Предмет не найден: {item_id}", show_alert=True)
         return
     
-    # 3. Проверяем золото
-    current_gold = player.get("gold", 0)
-    item_price = item.get("price", 0)
+    current_gold = int(player.get("gold", 0))
+    item_price = int(item.get("price", 0))
     
-    logger.info(f"Buy check: user={user_id}, gold={current_gold}, price={item_price}, item={item['name']}")
+    logger.info(f"💰 Проверка: gold={current_gold}, price={item_price}, item={item['name']}")
     
     if current_gold < item_price:
         await callback.answer(f"❌ Недостаточно золота! Нужно: 💰{item_price}, у вас: 💰{current_gold}", show_alert=True)
         return
     
-    # 4. СПИСЫВАЕМ золото атомарно (через spend_gold)
+    # Атомарное списание золота
     if not db.spend_gold(user_id, item_price):
         await callback.answer("❌ Ошибка при списании золота!", show_alert=True)
-        logger.error(f"Failed to spend gold for user {user_id}")
         return
     
-    # 5. Добавляем предмет в инвентарь
+    # Добавляем предмет в инвентарь
     inv = player.get("inventory", {})
     inv[item_id] = inv.get(item_id, 0) + 1
     
-    # Обновляем инвентарь в БД
     if not db.update_player(user_id, inventory=inv):
-        # Если не удалось обновить инвентарь — ВОЗВРАЩАЕМ золото
-        db.add_gold(user_id, item_price)
+        db.add_gold(user_id, item_price)  # Возврат золота при ошибке
         await callback.answer("❌ Ошибка при добавлении предмета!", show_alert=True)
-        logger.error(f"Failed to update inventory for user {user_id}")
         return
     
-    # 6. Лог и уведомление
     db.add_log(user_id, "buy_item", f"Купил {item['name']} за {item_price}💰")
     await callback.answer(f"✅ Куплено: {item['name']} за 💰{item_price}!", show_alert=True)
-    
-    # 7. Обновляем экран магазина
     await show_shop_category(callback)
 
 @dp.callback_query(F.data == "battle_menu")
@@ -573,7 +530,7 @@ async def cards_menu(callback: types.CallbackQuery):
 
 @dp.callback_query(F.data.startswith("card_"))
 async def draw_card(callback: types.CallbackQuery):
-    ctype = callback.data.split("_")[1]
+    ctype = callback.data.split("_", 1)[1]
     text = random.choice(CARDS[ctype])
     colors = {"red":"🔴","yellow":"🟡","green":"🟢","black":"⚫"}
     kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🔄 Ещё", callback_data=f"card_{ctype}")],[InlineKeyboardButton(text="🔙 Назад", callback_data="cards_menu")]])
@@ -595,7 +552,7 @@ async def magic_tower(callback: types.CallbackQuery):
 
 @dp.callback_query(F.data.startswith("magic_"))
 async def show_spells(callback: types.CallbackQuery):
-    level = int(callback.data.split("_")[1])
+    level = int(callback.data.split("_", 1)[1])
     player = db.get_player(callback.from_user.id)
     if player["level"] < level:
         await callback.answer(f"❌ Нужен уровень {level}!", show_alert=True)
@@ -607,8 +564,9 @@ async def show_spells(callback: types.CallbackQuery):
 
 @dp.callback_query(F.data.startswith("spell_"))
 async def learn_spell(callback: types.CallbackQuery):
-    parts = callback.data.split("_")
-    level, spell_id = int(parts[1]), parts[2]
+    parts = callback.data.split("_", 1)[1].split("_", 1)
+    level = int(parts[0])
+    spell_id = parts[1] if len(parts) > 1 else ""
     player = db.get_player(callback.from_user.id)
     spell = next((s for s in SPELLS.get(level,[]) if s["id"]==spell_id), None)
     if not spell or player["level"]<level or player["gold"]<spell["cost"]:
