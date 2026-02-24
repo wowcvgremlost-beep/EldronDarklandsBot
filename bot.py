@@ -1,9 +1,6 @@
 """
 📁 bot.py - Основной код бота
-✅ ИСПРАВЛЕНО: 
-   - HP не восстанавливается после боя (только при смерти)
-   - Монстры в 5 раз сильнее
-   - У монстров есть навыки и магия
+✅ Рабочий магазин/инвентарь + Новая боевая система с сильными монстрами
 """
 
 import random, json, os, logging
@@ -30,7 +27,6 @@ class CharacterCreation(StatesGroup):
 
 class BattleState(StatesGroup):
     player_dice = State()
-    enemy_dice = State()
 
 # ==================== ДАННЫЕ ИГРЫ ====================
 RACES = {
@@ -40,6 +36,7 @@ RACES = {
     "orc": {"name": "👹 Орк", "bonus": "+3 Живучесть", "magic": "🔥 Ярость: +10% урона при HP<50%"},
     "fallen": {"name": "💀 Падший", "bonus": "+1 Ловк, +2 Инт", "magic": "👻 Тень: Первый удар скрытный"}
 }
+
 CLASSES = {
     "warrior": {"name": "⚔️ Воин", "bonus": "+1 Сила, +1 Жив", "magic": "🗡️ Воинский клич: +5 Физ.АТК"},
     "archer": {"name": "🏹 Лучник", "bonus": "+2 Ловкость", "magic": "🎯 Точный выстрел: Игнор 5 защиты"},
@@ -48,7 +45,9 @@ CLASSES = {
     "paladin": {"name": "🛡️ Паладин", "bonus": "+1 Сила, +1 Инт", "magic": "✨ Святой свет: Лечение +20 HP"},
     "necromancer": {"name": "💀 Некромант", "bonus": "+1 Инт, +1 Жив", "magic": "☠️ Поднять скелета: Призыв"}
 }
+
 RACE_MAGIC = {r: {"name": RACES[r]["magic"].split(":")[0].strip(), "description": RACES[r]["magic"].split(":")[1].strip() if ":" in RACES[r]["magic"] else "", "type": "passive"} for r in RACES}
+
 CLASS_MAGIC = {
     "warrior": {"name": "🗡️ Воинский клич", "description": "+5 Физ.АТК на 1 ход", "type": "active", "mp_cost": 5, "duration": 1},
     "archer": {"name": "🎯 Точный выстрел", "description": "Игнорирует 5 защиты", "type": "active", "mp_cost": 5, "duration": 1},
@@ -125,64 +124,143 @@ CARDS = {"red": ["👹 Монстр!", "🐺 Атака!"], "yellow": ["📜 З�
 
 # ==================== КЛАВИАТУРЫ ====================
 def main_menu_kb():
-    return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="👤 Персонаж", callback_data="my_character")],[InlineKeyboardButton(text="⭐️ Навыки", callback_data="skills")],[InlineKeyboardButton(text="✨ Способности", callback_data="abilities")],[InlineKeyboardButton(text="🎒 Инвентарь", callback_data="inventory")],[InlineKeyboardButton(text="🏪 Магазин", callback_data="shop")],[InlineKeyboardButton(text="⚔️ Бой", callback_data="battle_menu")],[InlineKeyboardButton(text="🃏 Карточки", callback_data="cards_menu")],[InlineKeyboardButton(text="📜 Лог", callback_data="logs")],[InlineKeyboardButton(text="🔮 Магия", callback_data="magic_tower")]])
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="👤 Персонаж", callback_data="my_character")],
+        [InlineKeyboardButton(text="⭐️ Навыки", callback_data="skills")],
+        [InlineKeyboardButton(text="✨ Способности", callback_data="abilities")],
+        [InlineKeyboardButton(text="🎒 Инвентарь", callback_data="inventory")],
+        [InlineKeyboardButton(text="🏪 Магазин", callback_data="shop")],
+        [InlineKeyboardButton(text="⚔️ Бой", callback_data="battle_menu")],
+        [InlineKeyboardButton(text="🃏 Карточки", callback_data="cards_menu")],
+        [InlineKeyboardButton(text="📜 Лог", callback_data="logs")],
+        [InlineKeyboardButton(text="🔮 Магия", callback_data="magic_tower")],
+    ])
+
 def race_kb():
     kb = [[InlineKeyboardButton(text=f"{RACES[r]['name']} {RACES[r]['bonus']}", callback_data=f"race_{r}")] for r in RACES]
     kb.append([InlineKeyboardButton(text="🔙 Назад", callback_data="back_to_start")])
     return InlineKeyboardMarkup(inline_keyboard=kb)
+
 def class_kb():
     kb = [[InlineKeyboardButton(text=f"{CLASSES[c]['name']} {CLASSES[c]['bonus']}", callback_data=f"class_{c}")] for c in CLASSES]
     kb.append([InlineKeyboardButton(text="🔙 Назад", callback_data="back_to_race")])
     return InlineKeyboardMarkup(inline_keyboard=kb)
+
 def skills_kb():
-    return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="💪 +1 Сила = ⚔️+4", callback_data="skill_strength")],[InlineKeyboardButton(text="⚡ +1 Ловк = ⚡+8 🛡️+3", callback_data="skill_agility")],[InlineKeyboardButton(text="❤️ +1 Жив = ❤️+10 🛡️+1", callback_data="skill_vitality")],[InlineKeyboardButton(text="🧠 +1 Инт = 💙+3 🔮+4", callback_data="skill_intelligence")],[InlineKeyboardButton(text="🔙 Назад", callback_data="main_menu")]])
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="💪 +1 Сила = ⚔️+4", callback_data="skill_strength")],
+        [InlineKeyboardButton(text="⚡ +1 Ловк = ⚡+8 🛡️+3", callback_data="skill_agility")],
+        [InlineKeyboardButton(text="❤️ +1 Жив = ❤️+10 🛡️+1", callback_data="skill_vitality")],
+        [InlineKeyboardButton(text="🧠 +1 Инт = 💙+3 🔮+4", callback_data="skill_intelligence")],
+        [InlineKeyboardButton(text="🔙 Назад", callback_data="main_menu")],
+    ])
+
 def inventory_kb():
-    return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🧪 Зелья", callback_data="inv_potions")],[InlineKeyboardButton(text="⚔️ Оружие", callback_data="inv_weapons")],[InlineKeyboardButton(text="🛡️ Экипировка", callback_data="inv_armor")],[InlineKeyboardButton(text="📿 Бижутерия", callback_data="inv_accessories")],[InlineKeyboardButton(text="📦 Разное", callback_data="inv_other")],[InlineKeyboardButton(text="🔙 Назад", callback_data="main_menu")]])
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🧪 Зелья", callback_data="inv_potions")],
+        [InlineKeyboardButton(text="⚔️ Оружие", callback_data="inv_weapons")],
+        [InlineKeyboardButton(text="🛡️ Экипировка", callback_data="inv_armor")],
+        [InlineKeyboardButton(text="📿 Бижутерия", callback_data="inv_accessories")],
+        [InlineKeyboardButton(text="📦 Разное", callback_data="inv_other")],
+        [InlineKeyboardButton(text="🔙 Назад", callback_data="main_menu")],
+    ])
+
 def shop_kb():
-    return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🧪 Зелья", callback_data="shop_potions")],[InlineKeyboardButton(text="⚔️ Оружие", callback_data="shop_weapons")],[InlineKeyboardButton(text="🛡️ Экипировка", callback_data="shop_armor")],[InlineKeyboardButton(text="📿 Бижутерия", callback_data="shop_accessories")],[InlineKeyboardButton(text="📦 Разное", callback_data="shop_other")],[InlineKeyboardButton(text="🔙 Назад", callback_data="main_menu")]])
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🧪 Зелья", callback_data="shop_potions")],
+        [InlineKeyboardButton(text="⚔️ Оружие", callback_data="shop_weapons")],
+        [InlineKeyboardButton(text="🛡️ Экипировка", callback_data="shop_armor")],
+        [InlineKeyboardButton(text="📿 Бижутерия", callback_data="shop_accessories")],
+        [InlineKeyboardButton(text="📦 Разное", callback_data="shop_other")],
+        [InlineKeyboardButton(text="🔙 Назад", callback_data="main_menu")],
+    ])
+
 def battle_menu_kb():
-    return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="👹 vs Монстр", callback_data="battle_pve")],[InlineKeyboardButton(text="🔙 Назад", callback_data="main_menu")]])
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="👹 vs Монстр", callback_data="battle_pve")],
+        [InlineKeyboardButton(text="🔙 Назад", callback_data="main_menu")],
+    ])
+
 def pve_monsters_kb():
-    return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🟢 Слабые", callback_data="monster_weak")],[InlineKeyboardButton(text="🟡 Средние", callback_data="monster_medium")],[InlineKeyboardButton(text="🔴 Сильные", callback_data="monster_strong")],[InlineKeyboardButton(text="👑 Боссы", callback_data="monster_bosses")],[InlineKeyboardButton(text="💀 ТИТАН", callback_data="monster_titan")],[InlineKeyboardButton(text="🔙 Назад", callback_data="battle_menu")]])
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🟢 Слабые", callback_data="monster_weak")],
+        [InlineKeyboardButton(text="🟡 Средние", callback_data="monster_medium")],
+        [InlineKeyboardButton(text="🔴 Сильные", callback_data="monster_strong")],
+        [InlineKeyboardButton(text="👑 Боссы", callback_data="monster_bosses")],
+        [InlineKeyboardButton(text="💀 ТИТАН", callback_data="monster_titan")],
+        [InlineKeyboardButton(text="🔙 Назад", callback_data="battle_menu")],
+    ])
+
 def cards_kb():
-    return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🔴 Красная", callback_data="card_red")],[InlineKeyboardButton(text="🟡 Жёлтая", callback_data="card_yellow")],[InlineKeyboardButton(text="🟢 Зелёная", callback_data="card_green")],[InlineKeyboardButton(text="⚫ Чёрная", callback_data="card_black")],[InlineKeyboardButton(text="🔙 Назад", callback_data="main_menu")]])
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🔴 Красная", callback_data="card_red")],
+        [InlineKeyboardButton(text="🟡 Жёлтая", callback_data="card_yellow")],
+        [InlineKeyboardButton(text="🟢 Зелёная", callback_data="card_green")],
+        [InlineKeyboardButton(text="⚫ Чёрная", callback_data="card_black")],
+        [InlineKeyboardButton(text="🔙 Назад", callback_data="main_menu")],
+    ])
+
 def magic_levels_kb():
-    return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="📊 Уровень 5", callback_data="magic_5")],[InlineKeyboardButton(text="📊 Уровень 15", callback_data="magic_15")],[InlineKeyboardButton(text="🔙 Назад", callback_data="magic_tower")]])
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="📊 Уровень 5", callback_data="magic_5")],
+        [InlineKeyboardButton(text="📊 Уровень 15", callback_data="magic_15")],
+        [InlineKeyboardButton(text="🔙 Назад", callback_data="magic_tower")],
+    ])
+
 def battle_action_kb():
-    return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="⚔️ Атака", callback_data="battle_attack")],[InlineKeyboardButton(text="🔮 Магия", callback_data="battle_magic")],[InlineKeyboardButton(text="🧪 Зелье", callback_data="battle_potion")],[InlineKeyboardButton(text="🏳️ Сдаться", callback_data="battle_surrender")]])
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="⚔️ Атака", callback_data="battle_attack")],
+        [InlineKeyboardButton(text="🔮 Магия", callback_data="battle_magic")],
+        [InlineKeyboardButton(text="🧪 Зелье", callback_data="battle_potion")],
+        [InlineKeyboardButton(text="🏳️ Сдаться", callback_data="battle_surrender")],
+    ])
 
 async def edit_safe(message, **kwargs):
     try:
         await message.edit_text(**kwargs)
         return True
     except Exception as e:
-        if any(x in str(e).lower() for x in ["message is not modified", "can't be edited", "not found"]): return True
+        if any(x in str(e).lower() for x in ["message is not modified", "can't be edited", "not found"]):
+            return True
         logger.error(f"❌ {e}")
         raise
 
 # ==================== АДМИН-КОМАНДЫ ====================
 @dp.message(Command("gold"))
 async def cmd_gold(message: types.Message):
-    if message.from_user.id not in ADMIN_IDS: await message.answer("🔒 Только для админа!"); return
+    if message.from_user.id not in ADMIN_IDS:
+        await message.answer("🔒 Только для админа!")
+        return
     parts = message.text.split()
-    if len(parts) < 2: await message.answer("💰 /gold me <сумма>"); return
+    if len(parts) < 2:
+        await message.answer("💰 /gold me <сумма>")
+        return
     action = parts[1]
     try:
         if action == "me" and len(parts) == 3:
-            amount = int(parts[2]); db.add_gold(message.from_user.id, amount); await message.answer(f"✅ +💰{amount}")
-    except: await message.answer("❌ Ошибка")
+            amount = int(parts[2])
+            db.add_gold(message.from_user.id, amount)
+            await message.answer(f"✅ +💰{amount}")
+    except:
+        await message.answer("❌ Ошибка")
 
 @dp.message(Command("reset"))
 async def cmd_reset(message: types.Message):
-    if message.from_user.id not in ADMIN_IDS: await message.answer("🔒 Только для админа!"); return
+    if message.from_user.id not in ADMIN_IDS:
+        await message.answer("🔒 Только для админа!")
+        return
     parts = message.text.split()
-    if len(parts) != 2: await message.answer("/reset <user_id>"); return
+    if len(parts) != 2:
+        await message.answer("/reset <user_id>")
+        return
     try:
         uid = int(parts[1])
         with db.get_connection() as conn:
-            c = conn.cursor(); c.execute("DELETE FROM players WHERE user_id = ?", (uid,))
+            c = conn.cursor()
+            c.execute("DELETE FROM players WHERE user_id = ?", (uid,))
         await message.answer(f"✅ Прогресс {uid} сброшен")
-    except Exception as e: await message.answer(f"❌ {e}")
+    except Exception as e:
+        await message.answer(f"❌ {e}")
 
 # ==================== ОСНОВНЫЕ ХЕНДЛЕРЫ ====================
 @dp.message(Command("start"))
@@ -191,30 +269,41 @@ async def cmd_start(message: types.Message, state: FSMContext):
     if player:
         await message.answer(f"🎮 Добро пожаловать, {player['name']}!\n💰 Золото: {player['gold']}", reply_markup=main_menu_kb(), parse_mode="HTML")
     else:
-        await message.answer("🌑 <b>ТЁМНЫЕ ЗЕМЛИ ЭЛДРОНА</b>\n\n<i>Введи имя (3-30 символов):</i>", parse_mode="HTML"); await state.set_state(CharacterCreation.name)
+        await message.answer("🌑 <b>ТЁМНЫЕ ЗЕМЛИ ЭЛДРОНА</b>\n\n<i>Введи имя (3-30 символов):</i>", parse_mode="HTML")
+        await state.set_state(CharacterCreation.name)
 
 @dp.message(CharacterCreation.name)
 async def set_name(message: types.Message, state: FSMContext):
     name = message.text.strip()
-    if len(name) < 3 or len(name) > 30: await message.answer("❌ Имя от 3 до 30 символов:"); return
-    await state.update_data(name=name); await message.answer(f"✅ Имя: {name}\n\nВыбери расу:", reply_markup=race_kb(), parse_mode="HTML"); await state.set_state(CharacterCreation.race)
+    if len(name) < 3 or len(name) > 30:
+        await message.answer("❌ Имя от 3 до 30 символов:")
+        return
+    await state.update_data(name=name)
+    await message.answer(f"✅ Имя: {name}\n\nВыбери расу:", reply_markup=race_kb(), parse_mode="HTML")
+    await state.set_state(CharacterCreation.race)
 
 @dp.callback_query(CharacterCreation.race, F.data.startswith("race_"))
 async def set_race(callback: types.CallbackQuery, state: FSMContext):
-    race = callback.data.split("_")[1]; await state.update_data(race=race)
-    await edit_safe(callback.message, text=f"✅ Раса: {RACES[race]['name']}\n{RACES[race]['magic']}\n\nВыбери класс:", reply_markup=class_kb(), parse_mode="HTML"); await state.set_state(CharacterCreation.class_type)
+    race = callback.data.split("_")[1]
+    await state.update_data(race=race)
+    await edit_safe(callback.message, text=f"✅ Раса: {RACES[race]['name']}\n{RACES[race]['magic']}\n\nВыбери класс:", reply_markup=class_kb(), parse_mode="HTML")
+    await state.set_state(CharacterCreation.class_type)
 
 @dp.callback_query(CharacterCreation.class_type, F.data.startswith("class_"))
 async def set_class(callback: types.CallbackQuery, state: FSMContext):
-    data = await state.get_data(); class_type = callback.data.split("_")[1]
-    db.create_player(callback.from_user.id, callback.from_user.username or "Hero", data["name"], data["race"], class_type); await state.clear()
+    data = await state.get_data()
+    class_type = callback.data.split("_")[1]
+    db.create_player(callback.from_user.id, callback.from_user.username or "Hero", data["name"], data["race"], class_type)
+    await state.clear()
     text = f"🎉 <b>Герой создан!</b>\n\n👤 {data['name']}\n🧬 {RACES[data['race']]['name']} | {CLASSES[class_type]['name']}\n💰 Золото: 5000"
     await edit_safe(callback.message, text=text, reply_markup=main_menu_kb(), parse_mode="HTML")
 
 @dp.callback_query(F.data == "my_character")
 async def show_character(callback: types.CallbackQuery):
     player = db.get_player(callback.from_user.id)
-    if not player: await callback.answer("❌ Создай персонажа!", show_alert=True); return
+    if not player:
+        await callback.answer("❌ Создай персонажа!", show_alert=True)
+        return
     exp_needed = player["level"] * 100
     text = (f"👤 <b>{player['name']}</b>\n📊 Уровень: {player['level']}\n❤️ HP: {player['hp']}/{player['max_hp']} | 💙 MP: {player['mp']}/{player['max_mp']}\n"
             f"✨ Опыт: {player['exp']}/{exp_needed} | 💰 Золото: {player['gold']}\n\n"
@@ -226,27 +315,45 @@ async def show_character(callback: types.CallbackQuery):
 @dp.callback_query(F.data == "skills")
 async def show_skills(callback: types.CallbackQuery):
     player = db.get_player(callback.from_user.id)
-    if not player: await callback.answer("❌ Создай персонажа!", show_alert=True); return
+    if not player:
+        await callback.answer("❌ Создай персонажа!", show_alert=True)
+        return
     text = f"⭐️ <b>Прокачка</b>\n\n👤 {player['name']} | ⭐️ Очки: <b>{player['skill_points']}</b>"
     await edit_safe(callback.message, text=text, reply_markup=skills_kb(), parse_mode="HTML")
 
 @dp.callback_query(F.data.startswith("skill_"))
 async def upgrade_skill(callback: types.CallbackQuery):
     player = db.get_player(callback.from_user.id)
-    if not player or player["skill_points"] < 1: await callback.answer("❌ Недостаточно очков!", show_alert=True); return
-    skill = callback.data.split("_")[1]; updates = {"skill_points": player["skill_points"] - 1}; msg = ""
-    if skill == "strength": updates.update({"strength": player["strength"]+1, "phys_atk": player["phys_atk"]+4}); msg = "💪 Сила +1 → ⚔️+4"
-    elif skill == "agility": updates.update({"agility": player["agility"]+1, "stealth_atk": player["stealth_atk"]+8, "evasion": player["evasion"]+3}); msg = "⚡ Ловкость +1 → ⚡+8 🛡️+3"
-    elif skill == "vitality": updates.update({"vitality": player["vitality"]+1, "max_hp": player["max_hp"]+10, "hp": player["hp"]+10, "phys_def": player["phys_def"]+1, "magic_def": player["magic_def"]+1}); msg = "❤️ Живучесть +1 → ❤️+10 🛡️+1"
-    elif skill == "intelligence": updates.update({"intelligence": player["intelligence"]+1, "max_mp": player["max_mp"]+3, "mp": player["mp"]+3, "magic_atk": player["magic_atk"]+4}); msg = "🧠 Интеллект +1 → 💙+3 🔮+4"
+    if not player or player["skill_points"] < 1:
+        await callback.answer("❌ Недостаточно очков!", show_alert=True)
+        return
+    skill = callback.data.split("_")[1]
+    updates = {"skill_points": player["skill_points"] - 1}
+    msg = ""
+    if skill == "strength":
+        updates.update({"strength": player["strength"]+1, "phys_atk": player["phys_atk"]+4})
+        msg = "💪 Сила +1 → ⚔️+4"
+    elif skill == "agility":
+        updates.update({"agility": player["agility"]+1, "stealth_atk": player["stealth_atk"]+8, "evasion": player["evasion"]+3})
+        msg = "⚡ Ловкость +1 → ⚡+8 🛡️+3"
+    elif skill == "vitality":
+        updates.update({"vitality": player["vitality"]+1, "max_hp": player["max_hp"]+10, "hp": player["hp"]+10, "phys_def": player["phys_def"]+1, "magic_def": player["magic_def"]+1})
+        msg = "❤️ Живучесть +1 → ❤️+10 🛡️+1"
+    elif skill == "intelligence":
+        updates.update({"intelligence": player["intelligence"]+1, "max_mp": player["max_mp"]+3, "mp": player["mp"]+3, "magic_atk": player["magic_atk"]+4})
+        msg = "🧠 Интеллект +1 → 💙+3 🔮+4"
     db.update_player(callback.from_user.id, **updates)
-    await callback.answer(f"✅ {msg}!", show_alert=True); await show_skills(callback)
+    await callback.answer(f"✅ {msg}!", show_alert=True)
+    await show_skills(callback)
 
 @dp.callback_query(F.data == "inventory")
 async def show_inventory(callback: types.CallbackQuery):
     player = db.get_player(callback.from_user.id)
-    if not player: await callback.answer("❌ Создай персонажа!", show_alert=True); return
-    inv = player["inventory"]; text = "🎒 Инвентарь\n\n" + ("\n".join([f"• {k} x{v}" for k,v in inv.items()]) if inv else "• Пусто")
+    if not player:
+        await callback.answer("❌ Создай персонажа!", show_alert=True)
+        return
+    inv = player["inventory"]
+    text = "🎒 Инвентарь\n\n" + ("\n".join([f"• {k} x{v}" for k,v in inv.items()]) if inv else "• Пусто")
     await edit_safe(callback.message, text=text, reply_markup=inventory_kb(), parse_mode="HTML")
 
 @dp.callback_query(F.data == "shop")
@@ -256,25 +363,36 @@ async def show_shop(callback: types.CallbackQuery):
 @dp.callback_query(F.data.startswith("shop_"))
 async def show_shop_category(callback: types.CallbackQuery):
     cat_map = {"shop_potions": "potions", "shop_weapons": "weapons", "shop_armor": "armor", "shop_accessories": "accessories", "shop_other": "other"}
-    category = cat_map.get(callback.data, "potions"); items = SHOP_ITEMS.get(category, [])
+    category = cat_map.get(callback.data, "potions")
+    items = SHOP_ITEMS.get(category, [])
     kb = [[InlineKeyboardButton(text=f"{item['name']} 💰{item['price']}", callback_data=f"buy_{category}_{item['id']}")] for item in items]
     kb.append([InlineKeyboardButton(text="🔙 Назад", callback_data="shop")])
     await edit_safe(callback.message, text=f"🏪 {category.title()}", reply_markup=InlineKeyboardMarkup(inline_keyboard=kb), parse_mode="HTML")
 
 @dp.callback_query(F.data.startswith("buy_"))
 async def buy_item(callback: types.CallbackQuery):
-    uid = callback.from_user.id; parts = callback.data.split("_", 2)
-    if len(parts) != 3: await callback.answer("❌ Ошибка!", show_alert=True); return
+    uid = callback.from_user.id
+    parts = callback.data.split("_", 2)
+    if len(parts) != 3:
+        await callback.answer("❌ Ошибка!", show_alert=True)
+        return
     category, item_id = parts[1], parts[2]
     player = db.get_player(uid)
-    if not player: await callback.answer("❌ Ошибка!", show_alert=True); return
+    if not player:
+        await callback.answer("❌ Ошибка!", show_alert=True)
+        return
     item = next((i for i in SHOP_ITEMS.get(category, []) if i["id"] == item_id), None)
-    if not item or player["gold"] < item["price"]: await callback.answer("❌ Недостаточно золота!", show_alert=True); return
+    if not item or player["gold"] < item["price"]:
+        await callback.answer("❌ Недостаточно золота!", show_alert=True)
+        return
     db.update_player(uid, gold=player["gold"] - item["price"])
-    inv = player.get("inventory", {}); inv[item_id] = inv.get(item_id, 0) + 1
+    inv = player.get("inventory", {})
+    inv[item_id] = inv.get(item_id, 0) + 1
     db.update_player(uid, inventory=inv)
     await callback.answer(f"✅ Куплено: {item['name']}!", show_alert=True)
     await show_shop_category(callback)
+
+# ==================== ⚔️ БОЕВАЯ СИСТЕМА ====================
 
 @dp.callback_query(F.data == "battle_menu")
 async def battle_menu(callback: types.CallbackQuery):
@@ -287,7 +405,9 @@ async def select_monster(callback: types.CallbackQuery):
 @dp.callback_query(F.data.startswith("monster_"))
 async def start_pve_battle(callback: types.CallbackQuery, state: FSMContext):
     player = db.get_player(callback.from_user.id)
-    if not player: await callback.answer("❌ Создай персонажа!", show_alert=True); return
+    if not player:
+        await callback.answer("❌ Создай персонажа!", show_alert=True)
+        return
     
     tier = callback.data.split("_")[1]
     if tier == "titan":
@@ -295,9 +415,9 @@ async def start_pve_battle(callback: types.CallbackQuery, state: FSMContext):
     elif tier in MONSTERS:
         monster = random.choice(MONSTERS[tier]).copy()
     else:
-        await callback.answer("❌ Ошибка!", show_alert=True); return
+        await callback.answer("❌ Ошибка!", show_alert=True)
+        return
     
-    # Сохраняем состояние боя
     battle_data = {
         "player": player,
         "enemy": monster,
@@ -321,19 +441,20 @@ async def player_dice_roll(message: types.Message, state: FSMContext):
     try:
         dice = int(message.text)
         if dice < 1 or dice > 20:
-            await message.answer("❌ Число от 1 до 20!"); return
+            await message.answer("❌ Число от 1 до 20!")
+            return
     except ValueError:
-        await message.answer("❌ Введи число!"); return
+        await message.answer("❌ Введи число!")
+        return
     
     data = await state.get_data()
     battle = data.get("battle", {})
     if not battle:
-        await message.answer("❌ Бой не найден."); await state.clear(); return
+        await message.answer("❌ Бой не найден.")
+        await state.clear()
+        return
     
-    # Бросок монстра
     enemy_dice = random.randint(1, 20)
-    
-    # Инициатива
     player_init = battle["player"]["stealth_atk"] + dice
     enemy_init = battle["enemy"]["evasion"] + enemy_dice
     first = "player" if player_init >= enemy_init else "enemy"
@@ -355,37 +476,29 @@ async def battle_action(callback: types.CallbackQuery, state: FSMContext):
     battle = data.get("battle", {})
     
     if not battle:
-        await callback.answer("❌ Бой не найден", show_alert=True); return
+        await callback.answer("❌ Бой не найден", show_alert=True)
+        return
     
     player = battle["player"].copy()
     enemy = battle["enemy"].copy()
     enemy_hp = battle["enemy_hp"]
     
-    # Получаем актуальные данные игрока из БД
     current_player = db.get_player(callback.from_user.id)
     if not current_player:
-        await callback.answer("❌ Ошибка!", show_alert=True); return
+        await callback.answer("❌ Ошибка!", show_alert=True)
+        return
     
     if action == "surrender":
-        # ✅ Сдаться: золото теряется, HP НЕ восстанавливается
         db.update_player(callback.from_user.id, gold=0)
-        await callback.message.edit_text("🏳️ Ты сдался.\n💰 Золото потеряно.\n❤️ HP не восстановлено.", reply_markup=main_menu_kb(), parse_mode="HTML")
+        await callback.message.edit_text("🏳️ Ты сдался.\n💰 Золото потеряно.", reply_markup=main_menu_kb(), parse_mode="HTML")
         await state.clear()
         return
     
     if action == "attack":
-        # Физическая атака игрока
         player_dmg = max(1, player["phys_atk"] - enemy["phys_def"] + random.randint(1, 20))
         enemy_hp -= player_dmg
         
-        # Проверка на крит (навык гоблина)
-        if enemy.get("skill") == "🗡️ Крит" and random.randint(1, 100) <= enemy.get("skill_chance", 0):
-            player_dmg *= 2
-            enemy_hp -= player_dmg
-            logger.info(f"🗡️ Критический удар! +{player_dmg} урона")
-        
         if enemy_hp <= 0:
-            # ✅ ПОБЕДА: HP НЕ восстанавливаются
             db.update_player(callback.from_user.id, 
                 exp=current_player["exp"] + enemy["exp"],
                 gold=current_player["gold"] + enemy["gold"])
@@ -402,25 +515,18 @@ async def battle_action(callback: types.CallbackQuery, state: FSMContext):
             await state.clear()
             return
         
-        # Ход монстра
         enemy_dmg = max(1, enemy["phys_atk"] - player["phys_def"] + random.randint(1, 20))
         new_hp = max(0, current_player["hp"] - enemy_dmg)
         
-        # Проверка навыка монстра
         skill_used = ""
         if enemy.get("skill") and random.randint(1, 100) <= enemy.get("skill_chance", 0):
             skill_used = f"\n✨ {enemy['name']} использовал {enemy['skill']}!"
-            if enemy["skill"] == "🦇 Вампиризм":
-                steal = min(10, enemy_dmg)
-                enemy_hp = min(enemy["max_hp"], enemy_hp + steal)
-                skill_used += f" (украдено {steal} HP)"
-            elif enemy["skill"] == "🩸 Кровопийца":
-                steal = min(20, enemy_dmg)
+            if enemy["skill"] in ["🦇 Вампиризм", "🩸 Кровопийца"]:
+                steal = min(10 if "Вампиризм" in enemy["skill"] else 20, enemy_dmg)
                 enemy_hp = min(enemy["max_hp"], enemy_hp + steal)
                 skill_used += f" (украдено {steal} HP)"
         
         if new_hp <= 0:
-            # ✅ ПОРАЖЕНИЕ: золото теряется, HP восстанавливаются ТОЛЬКО при смерти
             db.update_player(callback.from_user.id, gold=0, hp=current_player["max_hp"])
             db.add_log(callback.from_user.id, "battle_lose", f"Поражение от {enemy['name']}")
             
@@ -429,15 +535,12 @@ async def battle_action(callback: types.CallbackQuery, state: FSMContext):
                 f"👹 {enemy['name']} нанёс {enemy_dmg} урона{skill_used}\n"
                 f"Ты пал в бою...\n"
                 f"💰 Всё золото потеряно.\n"
-                f"❤️ Ты воскрешён с полным HP (только после смерти).",
+                f"❤️ Ты воскрешён с полным HP.",
                 reply_markup=main_menu_kb(), parse_mode="HTML")
             await state.clear()
             return
         
-        # ✅ Обновляем HP игрока (НЕ восстанавливаем после боя!)
         db.update_player(callback.from_user.id, hp=new_hp)
-        
-        # Сохраняем состояние
         battle["enemy_hp"] = enemy_hp
         battle["player"]["hp"] = new_hp
         await state.update_data(battle=battle)
@@ -454,7 +557,8 @@ async def battle_action(callback: types.CallbackQuery, state: FSMContext):
     
     if action == "magic":
         if current_player["mp"] < 5:
-            await callback.answer("❌ Недостаточно MP!", show_alert=True); return
+            await callback.answer("❌ Недостаточно MP!", show_alert=True)
+            return
         dmg = max(1, player["magic_atk"] - enemy.get("magic_def", 5) + random.randint(1, 20))
         enemy_hp -= dmg
         db.update_player(callback.from_user.id, mp=max(0, current_player["mp"] - 5))
@@ -464,7 +568,8 @@ async def battle_action(callback: types.CallbackQuery, state: FSMContext):
     if action == "potion":
         inv = current_player.get("inventory", {})
         if "hp_small" not in inv or inv["hp_small"] < 1:
-            await callback.answer("❌ Нет зелий!", show_alert=True); return
+            await callback.answer("❌ Нет зелий!", show_alert=True)
+            return
         new_hp = min(current_player["max_hp"], current_player["hp"] + 30)
         inv["hp_small"] -= 1
         db.update_player(callback.from_user.id, hp=new_hp, inventory=inv)
@@ -477,7 +582,8 @@ async def cards_menu(callback: types.CallbackQuery):
 
 @dp.callback_query(F.data.startswith("card_"))
 async def draw_card(callback: types.CallbackQuery):
-    ctype = callback.data.split("_", 1)[1]; text = random.choice(CARDS[ctype])
+    ctype = callback.data.split("_", 1)[1]
+    text = random.choice(CARDS[ctype])
     colors = {"red": "🔴", "yellow": "🟡", "green": "🟢", "black": "⚫"}
     kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🔄 Ещё", callback_data=f"card_{ctype}")],[InlineKeyboardButton(text="🔙 Назад", callback_data="cards_menu")]])
     await edit_safe(callback.message, text=f"{colors[ctype]} {text}", reply_markup=kb, parse_mode="HTML")
@@ -491,14 +597,18 @@ async def show_logs(callback: types.CallbackQuery):
 @dp.callback_query(F.data == "magic_tower")
 async def magic_tower(callback: types.CallbackQuery):
     player = db.get_player(callback.from_user.id)
-    if not player: await callback.answer("❌ Создай персонажа!", show_alert=True); return
+    if not player:
+        await callback.answer("❌ Создай персонажа!", show_alert=True)
+        return
     await edit_safe(callback.message, text=f"🔮 Башня Магии\n\nУровень: {player['level']}\n💰 {player['gold']}", reply_markup=magic_levels_kb(), parse_mode="HTML")
 
 @dp.callback_query(F.data.startswith("magic_"))
 async def show_spells(callback: types.CallbackQuery):
     level = int(callback.data.split("_", 1)[1])
     player = db.get_player(callback.from_user.id)
-    if player["level"] < level: await callback.answer(f"❌ Нужен уровень {level}!", show_alert=True); return
+    if player["level"] < level:
+        await callback.answer(f"❌ Нужен уровень {level}!", show_alert=True)
+        return
     spells = SPELLS.get(level, [])
     kb = [[InlineKeyboardButton(text=f"{s['name']} 💰{s['cost']}", callback_data=f"spell_{level}_{s['id']}")] for s in spells]
     kb.append([InlineKeyboardButton(text="🔙 Назад", callback_data="magic_tower")])
@@ -511,21 +621,27 @@ async def learn_spell(callback: types.CallbackQuery):
     player = db.get_player(callback.from_user.id)
     spell = next((s for s in SPELLS.get(level, []) if s["id"] == spell_id), None)
     if not spell or player["level"] < level or player["gold"] < spell["cost"]:
-        await callback.answer("❌ Недостаточно условий!", show_alert=True); return
+        await callback.answer("❌ Недостаточно условий!", show_alert=True)
+        return
     db.update_player(callback.from_user.id, gold=player["gold"] - spell["cost"])
     spells = player["spells"]
-    if spell_id not in spells: spells.append(spell_id); db.update_player(callback.from_user.id, spells=spells)
+    if spell_id not in spells:
+        spells.append(spell_id)
+        db.update_player(callback.from_user.id, spells=spells)
     await callback.answer(f"✅ Изучено: {spell['name']}!", show_alert=True)
 
 @dp.callback_query(F.data == "back_to_start")
 async def back_start(callback: types.CallbackQuery, state: FSMContext):
-    await edit_safe(callback.message, text="🌑 Введи имя:", parse_mode="HTML"); await state.set_state(CharacterCreation.name)
+    await edit_safe(callback.message, text="🌑 Введи имя:", parse_mode="HTML")
+    await state.set_state(CharacterCreation.name)
 
 @dp.callback_query(F.data == "main_menu")
 async def back_main(callback: types.CallbackQuery):
     player = db.get_player(callback.from_user.id)
-    if player: await edit_safe(callback.message, text=f"🎮 {player['name']}", reply_markup=main_menu_kb(), parse_mode="HTML")
-    else: await edit_safe(callback.message, text="🌑 /start", parse_mode="HTML")
+    if player:
+        await edit_safe(callback.message, text=f"🎮 {player['name']}", reply_markup=main_menu_kb(), parse_mode="HTML")
+    else:
+        await edit_safe(callback.message, text="🌑 /start", parse_mode="HTML")
 
 # ==================== WEBHOOK ====================
 async def on_startup(app):
@@ -536,18 +652,29 @@ async def on_startup(app):
         logger.info(f"✅ Webhook: {url}/webhook")
 
 async def on_shutdown(app):
-    await bot.delete_webhook(); await bot.session.close()
+    await bot.delete_webhook()
+    await bot.session.close()
 
 async def webhook_handler(request):
     try:
-        update = types.Update(**await request.json()); await dp.feed_update(bot, update); return web.Response()
-    except Exception as e: logger.error(f"❌ Webhook: {e}"); return web.Response(status=400)
+        update = types.Update(**await request.json())
+        await dp.feed_update(bot, update)
+        return web.Response()
+    except Exception as e:
+        logger.error(f"❌ Webhook: {e}")
+        return web.Response(status=400)
 
 def create_app():
-    app = web.Application(); app.router.add_post("/webhook", webhook_handler); app.on_startup.append(on_startup); app.on_shutdown.append(on_shutdown); return app
+    app = web.Application()
+    app.router.add_post("/webhook", webhook_handler)
+    app.on_startup.append(on_startup)
+    app.on_shutdown.append(on_shutdown)
+    return app
 
 def main():
-    app = create_app(); setup_application(app, dp, bot=bot); web.run_app(app, host="0.0.0.0", port=int(os.getenv("PORT", 8080)))
+    app = create_app()
+    setup_application(app, dp, bot=bot)
+    web.run_app(app, host="0.0.0.0", port=int(os.getenv("PORT", 8080)))
 
 if __name__ == "__main__":
     main()
