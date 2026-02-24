@@ -12,6 +12,19 @@ from aiohttp import web
 from config import BOT_TOKEN
 import database as db
 
+async def safe_edit_message(message, text: str, reply_markup=None, parse_mode="HTML"):
+    """Безопасное редактирование сообщения — игнорирует ошибку 'not modified'"""
+    try:
+        await message.edit_text(text=text, reply_markup=reply_markup, parse_mode=parse_mode)
+    except Exception as e:
+        # Игнорируем ошибку, если сообщение не изменилось
+        if "message is not modified" in str(e):
+            logging.debug(f"⚠️ Сообщение не изменилось: {message.message_id}")
+            return True
+        # Переподнимаем другие ошибки
+        raise
+    return True
+    
 # Настройка логирования
 logging.basicConfig(level=logging.INFO)
 
@@ -253,7 +266,7 @@ async def set_name(message: types.Message, state: FSMContext):
 async def set_race(callback: types.CallbackQuery, state: FSMContext):
     race = callback.data.split("_")[1]
     await state.update_data(race=race)
-    await callback.message.edit_text(f"✅ Раса: {RACES[race]['name']}\n{RACES[race]['magic']}\n\nВыбери класс:", reply_markup=class_kb(), parse_mode="HTML")
+    await safe_edit_message(f"✅ Раса: {RACES[race]['name']}\n{RACES[race]['magic']}\n\nВыбери класс:", reply_markup=class_kb(), parse_mode="HTML")
     await state.set_state(CharacterCreation.class_type)
 
 @dp.callback_query(CharacterCreation.class_type, F.data.startswith("class_"))
@@ -274,7 +287,7 @@ async def set_class(callback: types.CallbackQuery, state: FSMContext):
         f"⚔️ {class_magic.get('name', '')}: {class_magic.get('description', '')}\n\n"
         f"Твоё приключение начинается!"
     )
-    await callback.message.edit_text(text, reply_markup=main_menu_kb(), parse_mode="HTML")
+    await safe_edit_message(callback.message, text, reply_markup=main_menu_kb(), parse_mode="HTML")
 
 @dp.callback_query(F.data == "my_character")
 async def show_character(callback: types.CallbackQuery):
@@ -326,7 +339,7 @@ async def show_character(callback: types.CallbackQuery):
         f"🎒 <b>ЭКИПИРОВКА:</b>\n{equip_text}"
     )
     
-    await callback.message.edit_text(text, reply_markup=main_menu_kb(), parse_mode="HTML")
+    await safe_edit_message(callback.message, text, reply_markup=main_menu_kb(), parse_mode="HTML")
 
 @dp.callback_query(F.data == "skills")
 async def show_skills(callback: types.CallbackQuery):
@@ -345,7 +358,7 @@ async def show_skills(callback: types.CallbackQuery):
         f"🧠 +1 Интеллект → 💙 MP +3, 🔮 Маг.АТК +4\n\n"
         f"<i>Нажми на кнопку:</i>"
     )
-    await callback.message.edit_text(text, reply_markup=skills_kb(), parse_mode="HTML")
+    await safe_edit_message(callback.message, text, reply_markup=skills_kb(), parse_mode="HTML")
 
 @dp.callback_query(F.data.startswith("skill_"))
 async def upgrade_skill(callback: types.CallbackQuery):
@@ -391,7 +404,7 @@ async def show_abilities(callback: types.CallbackQuery):
         f"💰 Стоимость: {class_magic.get('mp_cost', 0)} MP\n"
         f"⏱️ Длительность: {class_magic.get('duration', 0)} ход(а)"
     )
-    await callback.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=ability_kb), parse_mode="HTML")
+    await safe_edit_message(callback.message, text, reply_markup=InlineKeyboardMarkup(inline_keyboard=ability_kb), parse_mode="HTML")
 
 @dp.callback_query(F.data == "inventory")
 async def show_inventory(callback: types.CallbackQuery):
@@ -401,11 +414,11 @@ async def show_inventory(callback: types.CallbackQuery):
         return
     inv = player["inventory"]
     text = "🎒 Инвентарь\n\n" + ("\n".join([f"• {item_id} x{count}" for item_id, count in inv.items()]) if inv else "• Пусто")
-    await callback.message.edit_text(text, reply_markup=inventory_kb(), parse_mode="HTML")
+    await safe_edit_message(callback.message, text, reply_markup=inventory_kb(), parse_mode="HTML")
 
 @dp.callback_query(F.data == "shop")
 async def show_shop(callback: types.CallbackQuery):
-    await callback.message.edit_text("🏪 Магазин\n\nВыбери категорию:", reply_markup=shop_kb(), parse_mode="HTML")
+    await safe_edit_message("🏪 Магазин\n\nВыбери категорию:", reply_markup=shop_kb(), parse_mode="HTML")
 
 @dp.callback_query(F.data.startswith("shop_"))
 async def show_shop_category(callback: types.CallbackQuery):
@@ -414,7 +427,7 @@ async def show_shop_category(callback: types.CallbackQuery):
     items = SHOP_ITEMS.get(category, [])
     kb = [[InlineKeyboardButton(text=f"{item['name']} 💰{item['price']}", callback_data=f"buy_{item['id']}")] for item in items]
     kb.append([InlineKeyboardButton(text="🔙 Назад", callback_data="shop")])
-    await callback.message.edit_text(f"🏪 {category.title()}", reply_markup=InlineKeyboardMarkup(inline_keyboard=kb), parse_mode="HTML")
+    await safe_edit_message(f"🏪 {category.title()}", reply_markup=InlineKeyboardMarkup(inline_keyboard=kb), parse_mode="HTML")
 
 @dp.callback_query(F.data.startswith("buy_"))
 async def buy_item(callback: types.CallbackQuery):
@@ -433,28 +446,28 @@ async def buy_item(callback: types.CallbackQuery):
 
 @dp.callback_query(F.data == "battle_menu")
 async def battle_menu(callback: types.CallbackQuery):
-    await callback.message.edit_text("⚔️ Бой", reply_markup=battle_menu_kb(), parse_mode="HTML")
+    await safe_edit_message("⚔️ Бой", reply_markup=battle_menu_kb(), parse_mode="HTML")
 
 @dp.callback_query(F.data == "battle_pve")
 async def select_monster(callback: types.CallbackQuery):
-    await callback.message.edit_text("👹 Выбери сложность", reply_markup=pve_monsters_kb(), parse_mode="HTML")
+    await safe_edit_message("👹 Выбери сложность", reply_markup=pve_monsters_kb(), parse_mode="HTML")
 
 @dp.callback_query(F.data == "cards_menu")
 async def cards_menu(callback: types.CallbackQuery):
-    await callback.message.edit_text("🃏 Карточки\n\nВыбери тип:", reply_markup=cards_kb(), parse_mode="HTML")
+    await safe_edit_message("🃏 Карточки\n\nВыбери тип:", reply_markup=cards_kb(), parse_mode="HTML")
 
 @dp.callback_query(F.data.startswith("card_"))
 async def draw_card(callback: types.CallbackQuery):
     card_type = callback.data.split("_")[1]
     text = random.choice(CARDS[card_type])
     colors = {"red": "🔴", "yellow": "🟡", "green": "🟢", "black": "⚫"}
-    await callback.message.edit_text(f"{colors[card_type]} {text}", reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🔄 Ещё", callback_data=f"card_{card_type}")], [InlineKeyboardButton(text="🔙 Назад", callback_data="cards_menu")]]), parse_mode="HTML")
+    await safe_edit_message(f"{colors[card_type]} {text}", reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🔄 Ещё", callback_data=f"card_{card_type}")], [InlineKeyboardButton(text="🔙 Назад", callback_data="cards_menu")]]), parse_mode="HTML")
 
 @dp.callback_query(F.data == "logs")
 async def show_logs(callback: types.CallbackQuery):
     logs = db.get_logs(callback.from_user.id)
     text = "📜 Лог\n\n" + "\n".join([f"• {l['action']}: {l['details']}" for l in logs[:10]]) if logs else "• Пусто"
-    await callback.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🔙 Назад", callback_data="main_menu")]]), parse_mode="HTML")
+    await safe_edit_message(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🔙 Назад", callback_data="main_menu")]]), parse_mode="HTML")
 
 @dp.callback_query(F.data == "magic_tower")
 async def magic_tower(callback: types.CallbackQuery):
@@ -462,7 +475,7 @@ async def magic_tower(callback: types.CallbackQuery):
     if not player:
         await callback.answer("❌ Создай персонажа!", show_alert=True)
         return
-    await callback.message.edit_text(f"🔮 Башня Магии\n\nУровень: {player['level']}\n💰 {player['gold']}", reply_markup=magic_levels_kb(), parse_mode="HTML")
+    await safe_edit_message(f"🔮 Башня Магии\n\nУровень: {player['level']}\n💰 {player['gold']}", reply_markup=magic_levels_kb(), parse_mode="HTML")
 
 @dp.callback_query(F.data.startswith("magic_"))
 async def show_spells(callback: types.CallbackQuery):
@@ -474,7 +487,7 @@ async def show_spells(callback: types.CallbackQuery):
     spells = SPELLS.get(level, [])
     kb = [[InlineKeyboardButton(text=f"{s['name']} 💰{s['cost']}", callback_data=f"spell_{level}_{s['id']}")] for s in spells]
     kb.append([InlineKeyboardButton(text="🔙 Назад", callback_data="magic_tower")])
-    await callback.message.edit_text(f"🔮 Уровень {level}", reply_markup=InlineKeyboardMarkup(inline_keyboard=kb), parse_mode="HTML")
+    await safe_edit_message(f"🔮 Уровень {level}", reply_markup=InlineKeyboardMarkup(inline_keyboard=kb), parse_mode="HTML")
 
 @dp.callback_query(F.data.startswith("spell_"))
 async def learn_spell(callback: types.CallbackQuery):
@@ -494,21 +507,21 @@ async def learn_spell(callback: types.CallbackQuery):
 
 @dp.callback_query(F.data == "back_to_start")
 async def back_start(callback: types.CallbackQuery, state: FSMContext):
-    await callback.message.edit_text("🌑 Введи имя (3-30 символов):", parse_mode="HTML")
+    await safe_edit_message("🌑 Введи имя (3-30 символов):", parse_mode="HTML")
     await state.set_state(CharacterCreation.name)
 
 @dp.callback_query(F.data == "back_to_race")
 async def back_race(callback: types.CallbackQuery, state: FSMContext):
-    await callback.message.edit_text("Выбери расу:", reply_markup=race_kb())
+    await safe_edit_message("Выбери расу:", reply_markup=race_kb())
     await state.set_state(CharacterCreation.race)
 
 @dp.callback_query(F.data == "main_menu")
 async def back_main(callback: types.CallbackQuery):
     player = db.get_player(callback.from_user.id)
     if player:
-        await callback.message.edit_text(f"🎮 {player['name']}", reply_markup=main_menu_kb(), parse_mode="HTML")
+        await safe_edit_message(f"🎮 {player['name']}", reply_markup=main_menu_kb(), parse_mode="HTML")
     else:
-        await callback.message.edit_text("🌑 /start для начала", parse_mode="HTML")
+        await safe_edit_message("🌑 /start для начала", parse_mode="HTML")
 
 # ==================== WEBHOOK ЗАПУСК ====================
 async def on_startup(app):
