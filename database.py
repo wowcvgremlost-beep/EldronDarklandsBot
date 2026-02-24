@@ -41,6 +41,7 @@ def init_db():
             time.sleep(attempt+1)
 
 def create_player(uid, uname, name, race, cls):
+    """✅ ИСПРАВЛЕНО: 31 значение для 31 колонки"""
     rb = {"human":{"skill_points":3},"elf":{"agility":3},"dwarf":{"strength":3},"orc":{"vitality":3},"fallen":{"agility":1,"intelligence":2}}
     cb = {"warrior":{"strength":1,"vitality":1},"archer":{"agility":2},"wizard":{"intelligence":2},"bard":{"intelligence":1,"agility":1},"paladin":{"strength":1,"intelligence":1},"necromancer":{"intelligence":1,"vitality":1}}
     b = {"strength":0,"vitality":0,"agility":0,"intelligence":0,"skill_points":0}
@@ -52,16 +53,28 @@ def create_player(uid, uname, name, race, cls):
     pdef, mdef, matk = 3+b["vitality"]+(5 if race=="dwarf" else 0), 3+b["vitality"], 10+b["intelligence"]*4
     mhp, mmp = 30+b["vitality"]*10, 10+b["intelligence"]*3
     if race=="elf": eva=int(eva*1.15)
+    
     for att in range(5):
         try:
             with get_connection() as conn:
                 c=conn.cursor()
-                c.execute("""INSERT INTO players VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-                    (uid,uname,name,race,cls,b["strength"],b["vitality"],b["agility"],b["intelligence"],b["skill_points"],
-                    patk,satk,eva,pdef,mdef,matk,mhp,mhp,mmp,mmp,"{}","{}","[]","{}",0,0,0,time.time()))
-                conn.commit(); add_log(uid,"create_character",f"{name} ({race}, {cls})")
+                # ✅ 31 значение для 31 колонки
+                c.execute("""INSERT INTO players VALUES(
+                    ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                    (uid, uname, name, race, cls,  # 1-5
+                    1, 0, 0,  # level, exp, gold (6-8)
+                    mhp, mhp, mmp, mmp,  # hp, max_hp, mp, max_mp (9-12)
+                    b["strength"], b["vitality"], b["agility"], b["intelligence"], b["skill_points"],  # 13-17
+                    patk, satk, eva, pdef, mdef, matk,  # 18-23
+                    "{}", "{}", "[]", "{}",  # equipment, inventory, spells, buffs (24-27)
+                    0, 0, 0,  # race_magic_active, class_magic_used, summon_hp (28-30)
+                    time.time()  # created_at (31)
+                    ))
+                conn.commit()
+                add_log(uid, "create_character", f"{name} ({race}, {cls})")
             break
-        except:
+        except Exception as e:
+            logger.error(f"❌ create_player error: {e}")
             if att==4: raise
             time.sleep(att+1)
 
