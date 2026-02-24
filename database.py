@@ -31,7 +31,7 @@ def init_db():
                     CREATE TABLE IF NOT EXISTS players (
                         user_id INTEGER PRIMARY KEY,
                         username TEXT, name TEXT, race TEXT, class_type TEXT,
-                        level INTEGER DEFAULT 1, exp INTEGER DEFAULT 0, gold INTEGER DEFAULT 0,
+                        level INTEGER DEFAULT 1, exp INTEGER DEFAULT 0, gold INTEGER DEFAULT 1000,
                         hp INTEGER DEFAULT 30, max_hp INTEGER DEFAULT 30,
                         mp INTEGER DEFAULT 10, max_mp INTEGER DEFAULT 10,
                         strength INTEGER DEFAULT 0, vitality INTEGER DEFAULT 0,
