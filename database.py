@@ -184,14 +184,10 @@ def get_logs(user_id: int, limit: int = 10) -> List[Dict]:
             time.sleep(attempt + 1)
     return []
 
-# ==================== НОВЫЕ ФУНКЦИИ ДЛЯ ЭКИПИРОВКИ ====================
-
 def calculate_stats_from_equipment(equipment: Dict, shop_items: Dict) -> Dict:
     """Рассчитывает бонусы от экипировки"""
     bonuses = {"strength": 0, "vitality": 0, "agility": 0, "intelligence": 0}
-    
     for slot, item_id in equipment.items():
-        # Ищем предмет во всех категориях
         for category, items in shop_items.items():
             for item in items:
                 if item["id"] == item_id:
@@ -200,20 +196,21 @@ def calculate_stats_from_equipment(equipment: Dict, shop_items: Dict) -> Dict:
                     if stat and stat in bonuses:
                         bonuses[stat] += value
                     break
-    
     return bonuses
 
 def apply_equipment_bonuses(player: Dict, shop_items: Dict) -> Dict:
-    """Применяет бонусы экипировки к статам игрока"""
+    """Применяет бонусы экипировки к статам"""
     equip_bonuses = calculate_stats_from_equipment(player.get("equipment", {}), shop_items)
+    base_str = player.get("base_strength", player["strength"] - equip_bonuses["strength"])
+    base_vit = player.get("base_vitality", player["vitality"] - equip_bonuses["vitality"])
+    base_agi = player.get("base_agility", player["agility"] - equip_bonuses["agility"])
+    base_int = player.get("base_intelligence", player["intelligence"] - equip_bonuses["intelligence"])
     
-    # Пересчитываем статы с учётом экипировки
-    player["strength"] = player.get("base_strength", player["strength"]) + equip_bonuses["strength"]
-    player["vitality"] = player.get("base_vitality", player["vitality"]) + equip_bonuses["vitality"]
-    player["agility"] = player.get("base_agility", player["agility"]) + equip_bonuses["agility"]
-    player["intelligence"] = player.get("base_intelligence", player["intelligence"]) + equip_bonuses["intelligence"]
+    player["strength"] = base_str + equip_bonuses["strength"]
+    player["vitality"] = base_vit + equip_bonuses["vitality"]
+    player["agility"] = base_agi + equip_bonuses["agility"]
+    player["intelligence"] = base_int + equip_bonuses["intelligence"]
     
-    # Пересчитываем боевые характеристики
     player["phys_atk"] = 5 + player["strength"] * 4
     player["stealth_atk"] = 10 + player["agility"] * 11
     player["evasion"] = 8 + player["agility"] * 3
