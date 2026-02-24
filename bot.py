@@ -499,23 +499,64 @@ async def show_shop_category(callback: types.CallbackQuery):
 
 @dp.callback_query(F.data.startswith("buy_"))
 async def buy_item(callback: types.CallbackQuery):
-    player = db.get_player(callback.from_user.id)
+    """Покупка предмета — ИСПРАВЛЕННАЯ ВЕРСИЯ"""
+    user_id = callback.from_user.id
     item_id = callback.data.split("_")[1]
+    
+    # 1. Получаем актуальные данные игрока
+    player = db.get_player(user_id)
+    if not player:
+        await callback.answer("❌ Ошибка: персонаж не найден!", show_alert=True)
+        return
+    
+    # 2. Ищем предмет в магазине
     item = None
-    for cat, items in SHOP_ITEMS.items():
-        for i in items:
+    for category_items in SHOP_ITEMS.values():
+        for i in category_items:
             if i["id"] == item_id:
                 item = i
                 break
-    if not item or player["gold"] < item["price"]:
-        await callback.answer("❌ Недостаточно золота!", show_alert=True)
+        if item:
+            break
+    
+    if not item:
+        await callback.answer("❌ Ошибка: предмет не найден!", show_alert=True)
+        logger.error(f"Item {item_id} not found in SHOP_ITEMS")
         return
-    db.update_player(callback.from_user.id, gold=player["gold"] - item["price"])
-    inv = player["inventory"]
+    
+    # 3. Проверяем золото
+    current_gold = player.get("gold", 0)
+    item_price = item.get("price", 0)
+    
+    logger.info(f"Buy check: user={user_id}, gold={current_gold}, price={item_price}, item={item['name']}")
+    
+    if current_gold < item_price:
+        await callback.answer(f"❌ Недостаточно золота! Нужно: 💰{item_price}, у вас: 💰{current_gold}", show_alert=True)
+        return
+    
+    # 4. СПИСЫВАЕМ золото атомарно (через spend_gold)
+    if not db.spend_gold(user_id, item_price):
+        await callback.answer("❌ Ошибка при списании золота!", show_alert=True)
+        logger.error(f"Failed to spend gold for user {user_id}")
+        return
+    
+    # 5. Добавляем предмет в инвентарь
+    inv = player.get("inventory", {})
     inv[item_id] = inv.get(item_id, 0) + 1
-    db.update_player(callback.from_user.id, inventory=inv)
-    db.add_log(callback.from_user.id, "buy_item", f"Купил {item['name']} за {item['price']}💰")
-    await callback.answer(f"✅ Куплено: {item['name']}!", show_alert=True)
+    
+    # Обновляем инвентарь в БД
+    if not db.update_player(user_id, inventory=inv):
+        # Если не удалось обновить инвентарь — ВОЗВРАЩАЕМ золото
+        db.add_gold(user_id, item_price)
+        await callback.answer("❌ Ошибка при добавлении предмета!", show_alert=True)
+        logger.error(f"Failed to update inventory for user {user_id}")
+        return
+    
+    # 6. Лог и уведомление
+    db.add_log(user_id, "buy_item", f"Купил {item['name']} за {item_price}💰")
+    await callback.answer(f"✅ Куплено: {item['name']} за 💰{item_price}!", show_alert=True)
+    
+    # 7. Обновляем экран магазина
     await show_shop_category(callback)
 
 @dp.callback_query(F.data == "battle_menu")
