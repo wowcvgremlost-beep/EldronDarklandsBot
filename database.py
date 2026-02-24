@@ -29,37 +29,43 @@ def init_db():
                 cursor = conn.cursor()
                 
                 # Таблица игроков
-                cursor.execute("""
-                    CREATE TABLE IF NOT EXISTS players (
-                        user_id INTEGER PRIMARY KEY,
-                        username TEXT,
-                        name TEXT,
-                        race TEXT,
-                        class_type TEXT,
-                        level INTEGER DEFAULT 1,
-                        exp INTEGER DEFAULT 0,
-                        gold INTEGER DEFAULT 0,
-                        hp INTEGER DEFAULT 30,
-                        max_hp INTEGER DEFAULT 30,
-                        mp INTEGER DEFAULT 10,
-                        max_mp INTEGER DEFAULT 10,
-                        strength INTEGER DEFAULT 0,
-                        vitality INTEGER DEFAULT 0,
-                        agility INTEGER DEFAULT 0,
-                        intelligence INTEGER DEFAULT 0,
-                        skill_points INTEGER DEFAULT 0,
-                        phys_atk INTEGER DEFAULT 5,
-                        stealth_atk INTEGER DEFAULT 10,
-                        evasion INTEGER DEFAULT 8,
-                        phys_def INTEGER DEFAULT 3,
-                        magic_def INTEGER DEFAULT 3,
-                        magic_atk INTEGER DEFAULT 10,
-                        equipment TEXT DEFAULT '{}',
-                        inventory TEXT DEFAULT '{}',
-                        spells TEXT DEFAULT '[]',
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                    )
-                """)
+                # Найдите CREATE TABLE players и добавьте эти поля:
+cursor.execute("""
+    CREATE TABLE IF NOT EXISTS players (
+        user_id INTEGER PRIMARY KEY,
+        username TEXT,
+        name TEXT,
+        race TEXT,
+        class_type TEXT,
+        level INTEGER DEFAULT 1,
+        exp INTEGER DEFAULT 0,
+        gold INTEGER DEFAULT 0,
+        hp INTEGER DEFAULT 30,
+        max_hp INTEGER DEFAULT 30,
+        mp INTEGER DEFAULT 10,
+        max_mp INTEGER DEFAULT 10,
+        strength INTEGER DEFAULT 0,
+        vitality INTEGER DEFAULT 0,
+        agility INTEGER DEFAULT 0,
+        intelligence INTEGER DEFAULT 0,
+        skill_points INTEGER DEFAULT 0,
+        phys_atk INTEGER DEFAULT 5,
+        stealth_atk INTEGER DEFAULT 10,
+        evasion INTEGER DEFAULT 8,
+        phys_def INTEGER DEFAULT 3,
+        magic_def INTEGER DEFAULT 3,
+        magic_atk INTEGER DEFAULT 10,
+        equipment TEXT DEFAULT '{}',
+        inventory TEXT DEFAULT '{}',
+        spells TEXT DEFAULT '[]',
+        -- НОВЫЕ ПОЛЯ ДЛЯ БАФФОВ --
+        buffs TEXT DEFAULT '{}',  -- текущие баффы {"phys_atk": 5, "turns_left": 2}
+        race_magic_active INTEGER DEFAULT 0,  -- активирована ли расовая магия
+        class_magic_used INTEGER DEFAULT 0,  -- использована ли классовая магия в бою
+        summon_hp INTEGER DEFAULT 0,  -- HP призванного существа
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+""")
                 
                 # Таблица логов
                 cursor.execute("""
