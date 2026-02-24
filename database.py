@@ -41,10 +41,9 @@ def init_db():
             time.sleep(attempt+1)
 
 def create_player(uid, uname, name, race, cls):
-    """✅ ИСПРАВЛЕНО: ровно 31 значение для 31 колонки"""
-    # Бонусы расы
+    """✅ ИСПРАВЛЕНО: динамическая генерация INSERT — невозможно ошибиться с количеством"""
+    # Бонусы расы и класса
     rb = {"human":{"skill_points":3},"elf":{"agility":3},"dwarf":{"strength":3},"orc":{"vitality":3},"fallen":{"agility":1,"intelligence":2}}
-    # Бонусы класса
     cb = {"warrior":{"strength":1,"vitality":1},"archer":{"agility":2},"wizard":{"intelligence":2},"bard":{"intelligence":1,"agility":1},"paladin":{"strength":1,"intelligence":1},"necromancer":{"intelligence":1,"vitality":1}}
     
     # Считаем бонусы
@@ -65,48 +64,30 @@ def create_player(uid, uname, name, race, cls):
     mmp = 10 + b["intelligence"] * 3
     if race == "elf": eva = int(eva * 1.15)
     
+    # ✅ Формируем список значений — Python сам посчитает длину
+    values = [
+        uid, uname, name, race, cls,           # 1-5: идентификаторы
+        1, 0, 0,                                # 6-8: level, exp, gold
+        mhp, mhp, mmp, mmp,                     # 9-12: hp, max_hp, mp, max_mp
+        b["strength"], b["vitality"], b["agility"], b["intelligence"], b["skill_points"],  # 13-17: навыки
+        patk, satk, eva, pdef, mdef, matk,      # 18-23: боевые статы
+        "{}", "{}", "[]", "{}",                 # 24-27: equipment, inventory, spells, buffs
+        0, 0, 0,                                # 28-30: флаги магии
+        time.time()                             # 31: created_at
+    ]
+    
+    logger.info(f"🔍 DEBUG: create_player values count = {len(values)}")  # Должно быть 31
+    
     for att in range(5):
         try:
             with get_connection() as conn:
                 c = conn.cursor()
-                # ✅ РОВНО 31 значение (посчитайте запятые: 30 запятых = 31 значение)
-                c.execute("""INSERT INTO players VALUES(
-                    ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-                    (
-                        uid,           # 1 user_id
-                        uname,         # 2 username
-                        name,          # 3 name
-                        race,          # 4 race
-                        cls,           # 5 class_type
-                        1,             # 6 level
-                        0,             # 7 exp
-                        0,             # 8 gold
-                        mhp,           # 9 hp
-                        mhp,           # 10 max_hp
-                        mmp,           # 11 mp
-                        mmp,           # 12 max_mp
-                        b["strength"], # 13 strength
-                        b["vitality"], # 14 vitality
-                        b["agility"],  # 15 agility
-                        b["intelligence"], # 16 intelligence
-                        b["skill_points"], # 17 skill_points
-                        patk,          # 18 phys_atk
-                        satk,          # 19 stealth_atk
-                        eva,           # 20 evasion
-                        pdef,          # 21 phys_def
-                        mdef,          # 22 magic_def
-                        matk,          # 23 magic_atk
-                        "{}",          # 24 equipment
-                        "{}",          # 25 inventory
-                        "[]",          # 26 spells
-                        "{}",          # 27 buffs
-                        0,             # 28 race_magic_active
-                        0,             # 29 class_magic_used
-                        0,             # 30 summon_hp
-                        time.time()    # 31 created_at
-                    ))
+                # ✅ Динамически генерируем placeholders: "?,?,?,..."
+                placeholders = ",".join(["?"] * len(values))
+                c.execute(f"INSERT INTO players VALUES ({placeholders})", values)
                 conn.commit()
                 add_log(uid, "create_character", f"{name} ({race}, {cls})")
+                logger.info(f"✅ Персонаж создан: {name}")
             break
         except Exception as e:
             logger.error(f"❌ create_player error: {e}")
