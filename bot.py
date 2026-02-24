@@ -1,9 +1,9 @@
 """
 📁 bot.py - Основной код бота
 ✅ ИСПРАВЛЕНО: 
-   - Фикс кнопки "Снять всю экипировку"
-   - Добавлено применение зелий (HP/MP)
-   - Добавлено применение свитка опыта (+50 EXP)
+   - +1 очко навыка при повышении уровня
+   - Фикс кнопки "🔻 Снять всю экипировку"
+   - Отображение экипированных предметов в инвентаре (✅)
 """
 
 import random, json, os, logging
@@ -54,7 +54,7 @@ CLASS_MAGIC = {
     "necromancer": {"name": "☠️ Поднять скелета", "description": "Призыв помощника", "type": "active", "mp_cost": 15, "duration": 3}
 }
 
-# 🏪 МАГАЗИН — ДОБАВЛЕНО: usable для предметов, которые можно применить
+# 🏪 МАГАЗИН
 SHOP_ITEMS = {
     "potions": [
         {"id": "hp_small", "name": "🧪 Малое зелье HP", "type_name": "Зелья", "type_num": "", "effect": "+30 HP", "price": 50, "stat": "hp", "value": 30, "slot": None, "usable": True},
@@ -243,11 +243,11 @@ async def show_inventory(callback: types.CallbackQuery):
             text += f"• {item_name} x{count}\n"
     await edit_safe(callback.message, text=text, reply_markup=inventory_kb(), parse_mode="HTML")
 
-# ==================== 🔧 ИНВЕНТАРЬ С ВЫБОРОМ ДЕЙСТВИЯ + КНОПКА "СНЯТЬ" + ПРИМЕНЕНИЕ ====================
+# ==================== 🔧 ИНВЕНТАРЬ С ВЫБОРОМ ДЕЙСТВИЯ + ОТОБРАЖЕНИЕ ЭКИПИРОВКИ ====================
 
 @dp.callback_query(F.data.startswith("inv_"))
 async def show_inventory_category(callback: types.CallbackQuery):
-    """Показывает предметы с кнопками выбора действия + кнопка 'Снять' если что-то экипировано"""
+    """✅ ИСПРАВЛЕНО: показывает что экипировано значком ✅"""
     player = db.get_player(callback.from_user.id)
     if not player: await callback.answer("❌ Создай персонажа!", show_alert=True); return
     cat_map = {"inv_potions": "potions", "inv_weapons": "weapons", "inv_armor": "armor", "inv_accessories": "accessories", "inv_other": "other"}
@@ -255,8 +255,11 @@ async def show_inventory_category(callback: types.CallbackQuery):
     items_in_inv = [(item, inv[item["id"]]) for item in SHOP_ITEMS.get(category, []) if item["id"] in inv and inv[item["id"]] > 0]
     kb = []
     for item, count in items_in_inv:
-        kb.append([InlineKeyboardButton(text=f"🎒 {item['name']} x{count}", callback_data=f"item_select_{item['id']}")])
-    # ✅ Кнопка "Снять всё" если в этой категории есть экипировка
+        # ✅ Проверяем, экипирован ли этот предмет
+        is_equipped = any(eid == item["id"] for eid in player.get("equipment", {}).values())
+        prefix = "✅ " if is_equipped else "🎒 "
+        kb.append([InlineKeyboardButton(text=f"{prefix}{item['name']} x{count}", callback_data=f"item_select_{item['id']}")])
+    # Кнопка "Снять всё" если в этой категории есть экипировка
     slot_prefix = {"weapons": "weapon", "armor": "armor", "accessories": "accessory"}.get(category)
     if slot_prefix and any(slot.startswith(slot_prefix) for slot in player.get("equipment", {})):
         kb.append([InlineKeyboardButton(text="🔻 Снять всю экипировку", callback_data=f"unequip_all_{category}")])
@@ -286,7 +289,7 @@ async def item_action_menu(callback: types.CallbackQuery):
     elif equipped_slot:
         kb.append([InlineKeyboardButton(text="✅ Экипировано", callback_data="noop")])
         kb.append([InlineKeyboardButton(text="🔻 Снять", callback_data=f"unequip_{item_id}")])
-    # ✅ Кнопка "Применить" для зелий и свитков
+    # Кнопка "Применить" для зелий и свитков
     if item.get("usable"):
         if item["stat"] == "hp":
             kb.append([InlineKeyboardButton(text=f"💚 Применить (+{item['value']} HP)", callback_data=f"use_{item_id}")])
@@ -305,7 +308,7 @@ async def item_action_menu(callback: types.CallbackQuery):
 
 @dp.callback_query(F.data.startswith("use_"))
 async def use_item(callback: types.CallbackQuery):
-    """✅ Применение зелий и свитков"""
+    """✅ Применение зелий и свитков + ✅ +1 очко навыка при повышении уровня"""
     player = db.get_player(callback.from_user.id)
     if not player: await callback.answer("❌ Создай персонажа!", show_alert=True); return
     item_id = callback.data.split("_", 1)[1]
@@ -333,15 +336,18 @@ async def use_item(callback: types.CallbackQuery):
         updates["mp"] = new_mp
         msg = f"💙 +{item['value']} MP"
     
-    # Применение свитка опыта
+    # ✅ Применение свитка опыта + повышение уровня + +1 очко навыка
     elif item["stat"] == "exp":
-        updates["exp"] = player["exp"] + item["value"]
-        # Проверка уровня
-        if updates["exp"] >= player["level"] * 100:
+        new_exp = player["exp"] + item["value"]
+        exp_needed = player["level"] * 100
+        if new_exp >= exp_needed:
+            # ✅ Повышение уровня!
             updates["level"] = player["level"] + 1
-            updates["exp"] = 0  # Сброс опыта после повышения уровня
-            msg = f"📜 +{item['value']} EXP | 🎉 Уровень +1!"
+            updates["exp"] = new_exp - exp_needed  # Остаток опыта
+            updates["skill_points"] = player["skill_points"] + 1  # ✅ +1 очко навыка при уровне!
+            msg = f"📜 +{item['value']} EXP | 🎉 Уровень {updates['level']}! +1⭐️"
         else:
+            updates["exp"] = new_exp
             msg = f"📜 +{item['value']} EXP"
     
     # Удаляем предмет из инвентаря
@@ -377,7 +383,7 @@ async def equip_item(callback: types.CallbackQuery):
     await callback.answer(f"✅ {item['name']} надето!", show_alert=True)
     await item_action_menu(callback)
 
-# ==================== 🔧 НОВАЯ ФУНКЦИЯ: СНЯТИЕ ЭКИПИРОВКИ (ИСПРАВЛЕННАЯ) ====================
+# ==================== 🔧 СНЯТИЕ ЭКИПИРОВКИ (ИСПРАВЛЕННАЯ) ====================
 
 @dp.callback_query(F.data.startswith("unequip_"))
 async def unequip_item(callback: types.CallbackQuery):
@@ -411,9 +417,14 @@ async def unequip_all_category(callback: types.CallbackQuery):
     """✅ ИСПРАВЛЕНО: Снимает всю экипировку в категории"""
     player = db.get_player(callback.from_user.id)
     if not player: await callback.answer("❌ Создай персонажа!", show_alert=True); return
-    category = callback.data.split("_", 2)[2]
     
-    # ✅ Правильное определение префикса слота для категории
+    # ✅ Правильный парсинг callback: unequip_all_weapons → category = "weapons"
+    parts = callback.data.split("_")
+    if len(parts) < 3:
+        await callback.answer("❌ Ошибка!", show_alert=True); return
+    category = parts[2]  # "weapons", "armor", или "accessories"
+    
+    # ✅ Правильное определение слотов для категории
     slot_map = {
         "weapons": ["weapon_1", "weapon_2"],
         "armor": ["armor_1", "armor_2", "armor_3", "armor_4", "armor_5", "armor_6"],
