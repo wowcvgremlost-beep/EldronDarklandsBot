@@ -56,39 +56,39 @@ CLASS_MAGIC = {
     "necromancer": {"name": "☠️ Поднять скелета", "description": "Призыв помощника", "type": "active", "mp_cost": 15, "duration": 3}
 }
 
+# ==================== МАГАЗИН (ПО ТЗ) ====================
 SHOP_ITEMS = {
     "potions": [
-        {"id": "hp_small", "name": "🧪 Малое зелье HP", "effect": "+30 HP", "price": 50, "type": "heal", "value": 30},
-        {"id": "hp_medium", "name": "🧪 Среднее зелье HP", "effect": "+60 HP", "price": 100, "type": "heal", "value": 60},
-        {"id": "hp_large", "name": "🧪 Большое зелье HP", "effect": "+100 HP", "price": 150, "type": "heal", "value": 100},
-        {"id": "mp_small", "name": "🧪 Малое зелье MP", "effect": "+30 MP", "price": 50, "type": "mana", "value": 30},
-        {"id": "mp_medium", "name": "🧪 Среднее зелье MP", "effect": "+60 MP", "price": 100, "type": "mana", "value": 60},
-        {"id": "mp_large", "name": "🧪 Большое зелье MP", "effect": "+100 MP", "price": 150, "type": "mana", "value": 100},
+        {"id": "hp_small", "name": "🧪 Малое зелье HP", "type_name": "Зелья", "type_num": "", "effect": "+30 HP", "price": 50, "stat": "hp", "value": 30},
+        {"id": "hp_medium", "name": "🧪 Среднее зелье HP", "type_name": "Зелья", "type_num": "", "effect": "+60 HP", "price": 100, "stat": "hp", "value": 60},
+        {"id": "hp_large", "name": "🧪 Большое зелье HP", "type_name": "Зелья", "type_num": "", "effect": "+100 HP", "price": 150, "stat": "hp", "value": 100},
+        {"id": "mp_small", "name": "🧪 Малое зелье MP", "type_name": "Зелья", "type_num": "", "effect": "+30 MP", "price": 50, "stat": "mp", "value": 30},
+        {"id": "mp_medium", "name": "🧪 Среднее зелье MP", "type_name": "Зелья", "type_num": "", "effect": "+60 MP", "price": 100, "stat": "mp", "value": 60},
+        {"id": "mp_large", "name": "🧪 Большое зелье MP", "type_name": "Зелья", "type_num": "", "effect": "+100 MP", "price": 150, "stat": "mp", "value": 100},
     ],
     "weapons": [
-        {"id": "sword_apprentice", "name": "⚔️ Меч Ученика", "effect": "+1 Сила", "price": 150, "stat": "strength", "value": 1, "slot": "weapon"},
-        {"id": "sword_knight", "name": "⚔️ Меч Рыцаря", "effect": "+3 Сила", "price": 500, "stat": "strength", "value": 3, "slot": "weapon"},
-        {"id": "bow_apprentice", "name": "🏹 Лук Ученика", "effect": "+1 Ловкость", "price": 150, "stat": "agility", "value": 1, "slot": "weapon"},
-        {"id": "bow_ranger", "name": "🏹 Лук Следопыта", "effect": "+3 Ловкость", "price": 500, "stat": "agility", "value": 3, "slot": "weapon"},
-        {"id": "staff_apprentice", "name": "🔮 Посох Ученика", "effect": "+1 Интеллект", "price": 150, "stat": "intelligence", "value": 1, "slot": "weapon"},
-        {"id": "staff_archmage", "name": "🔮 Посох Архимага", "effect": "+3 Интеллект", "price": 500, "stat": "intelligence", "value": 3, "slot": "weapon"},
+        {"id": "sword_apprentice", "name": "⚔️ Меч Ученика", "type_name": "Оружия", "type_num": "1", "effect": "+1 Сила", "price": 150, "stat": "strength", "value": 1, "slot": "weapon"},
+        {"id": "shield_apprentice", "name": "🛡️ Щит Ученика", "type_name": "Оружия", "type_num": "2", "effect": "+1 Живучесть", "price": 150, "stat": "vitality", "value": 1, "slot": "weapon"},
+        {"id": "bow_apprentice", "name": "🏹 Лук Ученика", "type_name": "Оружия", "type_num": "1", "effect": "+1 Ловкость", "price": 150, "stat": "agility", "value": 1, "slot": "weapon"},
+        {"id": "arrows_apprentice", "name": "🏹 Стрелы Ученика", "type_name": "Оружия", "type_num": "2", "effect": "+1 Ловкость", "price": 150, "stat": "agility", "value": 1, "slot": "weapon"},
+        {"id": "staff_apprentice", "name": "🔮 Посох Ученика", "type_name": "Оружия", "type_num": "1", "effect": "+1 Интеллект", "price": 150, "stat": "intelligence", "value": 1, "slot": "weapon"},
+        {"id": "orb_apprentice", "name": "🔮 Сфера Ученика", "type_name": "Оружия", "type_num": "2", "effect": "+1 Интеллект", "price": 150, "stat": "intelligence", "value": 1, "slot": "weapon"},
     ],
     "armor": [
-        {"id": "helm_apprentice", "name": "⛑️ Шлем Ученика", "effect": "+1 Живучесть", "price": 200, "stat": "vitality", "value": 1, "slot": "head"},
-        {"id": "helm_knight", "name": "⛑️ Шлем Рыцаря", "effect": "+3 Живучесть", "price": 600, "stat": "vitality", "value": 3, "slot": "head"},
-        {"id": "armor_apprentice", "name": "🛡️ Броня Ученика", "effect": "+2 Живучесть", "price": 300, "stat": "vitality", "value": 2, "slot": "body"},
-        {"id": "armor_knight", "name": "🛡️ Броня Рыцаря", "effect": "+5 Живучесть", "price": 900, "stat": "vitality", "value": 5, "slot": "body"},
-        {"id": "boots_apprentice", "name": "👢 Ботинки Ученика", "effect": "+1 Ловкость", "price": 200, "stat": "agility", "value": 1, "slot": "feet"},
-        {"id": "boots_ranger", "name": "👢 Сапоги Следопыта", "effect": "+3 Ловкость", "price": 600, "stat": "agility", "value": 3, "slot": "feet"},
+        {"id": "helm_apprentice", "name": "⛑️ Шлем Ученика", "type_name": "Экипировка", "type_num": "1", "effect": "+1 Живучесть", "price": 200, "stat": "vitality", "value": 1, "slot": "head"},
+        {"id": "armor_apprentice", "name": "🛡️ Броня Ученика", "type_name": "Экипировка", "type_num": "2", "effect": "+1 Живучесть", "price": 200, "stat": "vitality", "value": 1, "slot": "body"},
+        {"id": "pants_apprentice", "name": "👖 Штаны Ученика", "type_name": "Экипировка", "type_num": "3", "effect": "+1 Ловкость", "price": 200, "stat": "agility", "value": 1, "slot": "legs"},
+        {"id": "boots_apprentice", "name": "👢 Ботинки Ученика", "type_name": "Экипировка", "type_num": "4", "effect": "+1 Ловкость", "price": 200, "stat": "agility", "value": 1, "slot": "feet"},
+        {"id": "arms_apprentice", "name": "💪 Руки Ученика", "type_name": "Экипировка", "type_num": "5", "effect": "+1 Сила", "price": 200, "stat": "strength", "value": 1, "slot": "arms"},
+        {"id": "gloves_apprentice", "name": "🧤 Перчатки Ученика", "type_name": "Экипировка", "type_num": "6", "effect": "+1 Сила", "price": 200, "stat": "strength", "value": 1, "slot": "hands"},
     ],
     "accessories": [
-        {"id": "amulet_agility", "name": "📿 Амулет Ловкости", "effect": "+2 Ловкость", "price": 400, "stat": "agility", "value": 2, "slot": "accessory"},
-        {"id": "amulet_strength", "name": "📿 Амулет Силы", "effect": "+2 Сила", "price": 400, "stat": "strength", "value": 2, "slot": "accessory"},
-        {"id": "ring_protection", "name": "💍 Кольцо Защиты", "effect": "+2 Живучесть", "price": 400, "stat": "vitality", "value": 2, "slot": "accessory"},
-        {"id": "ring_intelligence", "name": "💍 Кольцо Интеллекта", "effect": "+2 Интеллект", "price": 400, "stat": "intelligence", "value": 2, "slot": "accessory"},
+        {"id": "amulet_agility", "name": "📿 Амулет Ловкости", "type_name": "Аксессуары", "type_num": "1", "effect": "+2 Ловкость", "price": 400, "stat": "agility", "value": 2, "slot": "accessory"},
+        {"id": "ring_protection", "name": "💍 Кольцо Защиты", "type_name": "Аксессуары", "type_num": "2", "effect": "+2 Живучесть", "price": 400, "stat": "vitality", "value": 2, "slot": "accessory"},
+        {"id": "chain_strength", "name": "⛓️ Цепь Силы", "type_name": "Аксессуары", "type_num": "3", "effect": "+2 Сила", "price": 400, "stat": "strength", "value": 2, "slot": "accessory"},
     ],
     "other": [
-        {"id": "scroll_exp", "name": "📜 Свиток опыта", "effect": "+50 Опыта", "price": 500, "type": "exp", "value": 50},
+        {"id": "scroll_exp", "name": "📜 Свиток опыта", "type_name": "Разное", "type_num": "", "effect": "+50 Опыта", "price": 500, "stat": "exp", "value": 50},
     ]
 }
 
@@ -149,8 +149,8 @@ def inventory_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🧪 Зелья", callback_data="inv_potions")],
         [InlineKeyboardButton(text="⚔️ Оружие", callback_data="inv_weapons")],
-        [InlineKeyboardButton(text="🛡️ Броня", callback_data="inv_armor")],
-        [InlineKeyboardButton(text="📿 Аксессуары", callback_data="inv_accessories")],
+        [InlineKeyboardButton(text="🛡️ Экипировка", callback_data="inv_armor")],
+        [InlineKeyboardButton(text="📿 Бижутерия", callback_data="inv_accessories")],
         [InlineKeyboardButton(text="📦 Разное", callback_data="inv_other")],
         [InlineKeyboardButton(text="🔙 Назад", callback_data="main_menu")],
     ])
@@ -159,8 +159,9 @@ def shop_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🧪 Зелья", callback_data="shop_potions")],
         [InlineKeyboardButton(text="⚔️ Оружие", callback_data="shop_weapons")],
-        [InlineKeyboardButton(text="🛡️ Броня", callback_data="shop_armor")],
-        [InlineKeyboardButton(text="📿 Аксессуары", callback_data="shop_accessories")],
+        [InlineKeyboardButton(text="🛡️ Экипировка", callback_data="shop_armor")],
+        [InlineKeyboardButton(text="📿 Бижутерия", callback_data="shop_accessories")],
+        [InlineKeyboardButton(text="📦 Разное", callback_data="shop_other")],
         [InlineKeyboardButton(text="🔙 Назад", callback_data="main_menu")],
     ])
 
@@ -198,7 +199,7 @@ def magic_levels_kb():
 
 # ==================== УТИЛИТЫ ====================
 async def edit_safe(message, **kwargs):
-    """Безопасное редактирование: игнорирует 'message is not modified'"""
+    """Безопасное редактирование"""
     try:
         await message.edit_text(**kwargs)
     except Exception as e:
@@ -269,15 +270,30 @@ async def show_character(callback: types.CallbackQuery):
     exp_needed = player["level"] * 100
     rm = RACE_MAGIC.get(player["race"], {})
     cm = CLASS_MAGIC.get(player["class_type"], {})
-    equip = "\n".join([f"• {k}: {v}" for k,v in player["equipment"].items()]) if player["equipment"] else "• Пусто"
+    
+    equip_text = ""
+    slot_names = {"weapon": "⚔️ Оружие", "head": "⛑️ Шлем", "body": "🛡️ Броня", "legs": "👖 Штаны", "feet": "👢 Ботинки", "arms": "💪 Руки", "hands": "🧤 Перчатки", "accessory": "📿 Аксессуар"}
+    if player["equipment"]:
+        for slot, item_id in player["equipment"].items():
+            item_name = item_id
+            for cat, items in SHOP_ITEMS.items():
+                for i in items:
+                    if i["id"] == item_id:
+                        item_name = i["name"]
+                        break
+            equip_text += f"{slot_names.get(slot, slot)}: {item_name}\n"
+    else:
+        equip_text = "• Пусто\n"
+    
     magic_info = f"📜 <b>СПОСОБНОСТИ:</b>\n✨ Раса: {rm.get('name','Нет')} - {rm.get('description','')}\n⚔️ Класс: {cm.get('name','Нет')} - {cm.get('description','')} (MP: {cm.get('mp_cost',0)})\n\n"
+    
     text = (f"👤 <b>{player['name']}</b>\n🧬 {RACES[player['race']]['name']} | {CLASSES[player['class_type']]['name']}\n"
             f"📊 Уровень: {player['level']}\n❤️ HP: {player['hp']}/{player['max_hp']} | 💙 MP: {player['mp']}/{player['max_mp']}\n"
             f"✨ Опыт: {player['exp']}/{exp_needed} | 💰 Золото: {player['gold']}\n\n"
             f"📊 <b>ХАРАКТЕРИСТИКИ:</b>\n⚔️ Физ.АТК: {player['phys_atk']}\n⚡️ Скр.АТК: {player['stealth_atk']}\n"
             f"🛡️ Уклон: {player['evasion']}\n🛡️ Физ.Защ: {player['phys_def']}\n🔮 Маг.Защ: {player['magic_def']}\n🔮 Маг.АТК: {player['magic_atk']}\n\n"
             f"📈 <b>НАВЫКИ:</b>\n💪 Сила: {player['strength']}\n❤️ Жив: {player['vitality']}\n⚡️ Ловк: {player['agility']}\n🧠 Инт: {player['intelligence']}\n⭐️ Очки: {player['skill_points']}\n\n"
-            f"{magic_info}🎒 <b>ЭКИПИРОВКА:</b>\n{equip}")
+            f"{magic_info}🎒 <b>ЭКИПИРОВКА:</b>\n{equip_text}")
     await edit_safe(callback.message, text=text, reply_markup=main_menu_kb(), parse_mode="HTML")
 
 @dp.callback_query(F.data == "skills")
@@ -337,8 +353,129 @@ async def show_inventory(callback: types.CallbackQuery):
         await callback.answer("❌ Создай персонажа!", show_alert=True)
         return
     inv = player["inventory"]
-    text = "🎒 Инвентарь\n\n" + ("\n".join([f"• {k} x{v}" for k,v in inv.items()]) if inv else "• Пусто")
+    text = "🎒 Инвентарь\n\n"
+    if not inv:
+        text += "• Пусто"
+    else:
+        for item_id, count in inv.items():
+            item_name = item_id
+            for cat, items in SHOP_ITEMS.items():
+                for i in items:
+                    if i["id"] == item_id:
+                        item_name = i["name"]
+                        break
+            text += f"• {item_name} x{count}\n"
     await edit_safe(callback.message, text=text, reply_markup=inventory_kb(), parse_mode="HTML")
+
+@dp.callback_query(F.data.startswith("inv_"))
+async def show_inventory_category(callback: types.CallbackQuery):
+    """Показывает предметы в категории инвентаря"""
+    player = db.get_player(callback.from_user.id)
+    if not player:
+        await callback.answer("❌ Создай персонажа!", show_alert=True)
+        return
+    
+    cat_map = {"inv_potions": "potions", "inv_weapons": "weapons", "inv_armor": "armor", "inv_accessories": "accessories", "inv_other": "other"}
+    category = cat_map.get(callback.data, "potions")
+    inv = player["inventory"]
+    
+    items_in_inv = []
+    for item in SHOP_ITEMS.get(category, []):
+        if item["id"] in inv and inv[item["id"]] > 0:
+            items_in_inv.append((item, inv[item["id"]]))
+    
+    kb = []
+    for item, count in items_in_inv:
+        equipped = False
+        for slot, item_id in player["equipment"].items():
+            if item_id == item["id"]:
+                equipped = True
+                break
+        if equipped:
+            kb.append([InlineKeyboardButton(text=f"✅ {item['name']} x{count}", callback_data=f"equip_{item['id']}")])
+        else:
+            kb.append([InlineKeyboardButton(text=f"🎒 {item['name']} x{count}", callback_data=f"equip_{item['id']}")])
+    
+    slot_map = {"weapons": "weapon", "armor": "head", "accessories": "accessory"}
+    slot = slot_map.get(category)
+    if slot and slot in player["equipment"]:
+        kb.append([InlineKeyboardButton(text="🔻 Снять", callback_data=f"unequip_{slot}")])
+    kb.append([InlineKeyboardButton(text="🔙 Назад", callback_data="inventory")])
+    
+    text = f"🎒 {category.title()}\n\n" + ("Нажми для экипировки:" if items_in_inv else "• Пусто")
+    await edit_safe(callback.message, text=text, reply_markup=InlineKeyboardMarkup(inline_keyboard=kb), parse_mode="HTML")
+
+@dp.callback_query(F.data.startswith("equip_"))
+async def equip_item(callback: types.CallbackQuery):
+    """Экипировка предмета"""
+    player = db.get_player(callback.from_user.id)
+    if not player:
+        await callback.answer("❌ Создай персонажа!", show_alert=True)
+        return
+    
+    item_id = callback.data.split("_")[1]
+    if item_id not in player["inventory"] or player["inventory"][item_id] < 1:
+        await callback.answer("❌ Нет в инвентаре!", show_alert=True)
+        return
+    
+    item = None
+    item_slot = None
+    for cat, items in SHOP_ITEMS.items():
+        for i in items:
+            if i["id"] == item_id:
+                item = i
+                item_slot = i.get("slot")
+                break
+        if item: break
+    
+    if not item_slot:
+        await callback.answer("❌ Неизвестный предмет!", show_alert=True)
+        return
+    
+    equipment = player["equipment"]
+    equipment[item_slot] = item_id
+    db.update_player(callback.from_user.id, equipment=equipment)
+    
+    updated_player = db.get_player(callback.from_user.id)
+    updated_player = db.apply_equipment_bonuses(updated_player, SHOP_ITEMS)
+    db.update_player(callback.from_user.id, **{k: updated_player[k] for k in ["strength", "vitality", "agility", "intelligence", "phys_atk", "stealth_atk", "evasion", "phys_def", "magic_def", "magic_atk", "max_hp", "max_mp"]})
+    
+    db.add_log(callback.from_user.id, "equip_item", f"Надел {item['name']}")
+    await callback.answer(f"✅ {item['name']} надето!", show_alert=True)
+    await show_inventory_category(callback)
+
+@dp.callback_query(F.data.startswith("unequip_"))
+async def unequip_item(callback: types.CallbackQuery):
+    """Снятие экипировки"""
+    player = db.get_player(callback.from_user.id)
+    if not player:
+        await callback.answer("❌ Создай персонажа!", show_alert=True)
+        return
+    
+    slot = callback.data.split("_")[1]
+    if slot not in player["equipment"]:
+        await callback.answer("⚠️ Ничего не надето!", show_alert=True)
+        return
+    
+    item_id = player["equipment"][slot]
+    item_name = item_id
+    for cat, items in SHOP_ITEMS.items():
+        for i in items:
+            if i["id"] == item_id:
+                item_name = i["name"]
+                break
+    
+    equipment = player["equipment"]
+    del equipment[slot]
+    db.update_player(callback.from_user.id, equipment=equipment)
+    
+    updated_player = db.get_player(callback.from_user.id)
+    updated_player = db.apply_equipment_bonuses(updated_player, SHOP_ITEMS)
+    db.update_player(callback.from_user.id, **{k: updated_player[k] for k in ["strength", "vitality", "agility", "intelligence", "phys_atk", "stealth_atk", "evasion", "phys_def", "magic_def", "magic_atk", "max_hp", "max_mp"]})
+    
+    db.add_log(callback.from_user.id, "unequip_item", f"Снял {item_name}")
+    await callback.answer(f"🔻 {item_name} снято!", show_alert=True)
+    await show_inventory_category(callback)
 
 @dp.callback_query(F.data == "shop")
 async def show_shop(callback: types.CallbackQuery):
@@ -346,25 +483,38 @@ async def show_shop(callback: types.CallbackQuery):
 
 @dp.callback_query(F.data.startswith("shop_"))
 async def show_shop_category(callback: types.CallbackQuery):
-    cmap = {"shop_potions":"potions","shop_weapons":"weapons","shop_armor":"armor","shop_accessories":"accessories"}
-    cat = cmap.get(callback.data, "potions")
-    items = SHOP_ITEMS.get(cat, [])
-    kb = [[InlineKeyboardButton(text=f"{i['name']} 💰{i['price']}", callback_data=f"buy_{i['id']}")] for i in items]
+    """Показывает товары в категории магазина"""
+    cat_map = {"shop_potions": "potions", "shop_weapons": "weapons", "shop_armor": "armor", "shop_accessories": "accessories", "shop_other": "other"}
+    category = cat_map.get(callback.data, "potions")
+    items = SHOP_ITEMS.get(category, [])
+    
+    kb = []
+    for item in items:
+        type_info = f" | Тип {item['type_name']} {item['type_num']}" if item.get('type_num') else f" | Тип {item['type_name']}"
+        kb.append([InlineKeyboardButton(text=f"{item['name']} {item['effect']} 💰{item['price']}", callback_data=f"buy_{item['id']}")])
     kb.append([InlineKeyboardButton(text="🔙 Назад", callback_data="shop")])
-    await edit_safe(callback.message, text=f"🏪 {cat.title()}", reply_markup=InlineKeyboardMarkup(inline_keyboard=kb), parse_mode="HTML")
+    
+    text = f"🏪 {category.title()}\n\n<i>Нажми для покупки:</i>"
+    await edit_safe(callback.message, text=text, reply_markup=InlineKeyboardMarkup(inline_keyboard=kb), parse_mode="HTML")
 
 @dp.callback_query(F.data.startswith("buy_"))
 async def buy_item(callback: types.CallbackQuery):
     player = db.get_player(callback.from_user.id)
     item_id = callback.data.split("_")[1]
-    item = next((i for c in SHOP_ITEMS.values() for i in c if i["id"]==item_id), None)
+    item = None
+    for cat, items in SHOP_ITEMS.items():
+        for i in items:
+            if i["id"] == item_id:
+                item = i
+                break
     if not item or player["gold"] < item["price"]:
         await callback.answer("❌ Недостаточно золота!", show_alert=True)
         return
-    db.update_player(callback.from_user.id, gold=player["gold"]-item["price"])
+    db.update_player(callback.from_user.id, gold=player["gold"] - item["price"])
     inv = player["inventory"]
     inv[item_id] = inv.get(item_id, 0) + 1
     db.update_player(callback.from_user.id, inventory=inv)
+    db.add_log(callback.from_user.id, "buy_item", f"Купил {item['name']} за {item['price']}💰")
     await callback.answer(f"✅ Куплено: {item['name']}!", show_alert=True)
     await show_shop_category(callback)
 
