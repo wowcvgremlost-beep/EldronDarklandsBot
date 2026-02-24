@@ -209,21 +209,6 @@ async def edit_safe(message, **kwargs):
         logger.error(f"❌ Ошибка редактирования: {e}")
         raise
 
-# ==================== ОБРАБОТЧИК ОШИБОК (aiogram 3.x) ====================
-@dp.error()
-async def global_error_handler(update: types.Update, exception: Exception) -> bool:
-    """Глобальный обработчик ошибок для aiogram 3.x"""
-    err_msg = str(exception).lower()
-    
-    # Игнорируем не критичные ошибки
-    if any(x in err_msg for x in ["message is not modified", "can't be edited", "message to edit not found", "there is no message in the update"]):
-        logger.debug(f"⚠️ Игнорирована ошибка: {exception}")
-        return True
-    
-    # Логируем остальные ошибки
-    logger.error(f"❌ Ошибка в update {update.update_id if update else 'N/A'}: {type(exception).__name__}: {exception}")
-    return True
-
 # ==================== ХЕНДЛЕРЫ ====================
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message, state: FSMContext):
