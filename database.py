@@ -10,7 +10,6 @@ DB_NAME = "eldron.db"
 
 @contextmanager
 def get_connection():
-    """Безопасное подключение к SQLite"""
     conn = None
     try:
         conn = sqlite3.connect(DB_NAME, timeout=30.0, check_same_thread=False)
@@ -22,7 +21,6 @@ def get_connection():
             conn.close()
 
 def init_db():
-    """Инициализация таблиц"""
     for attempt in range(5):
         try:
             with get_connection() as conn:
@@ -58,12 +56,10 @@ def init_db():
                 conn.commit()
             break
         except sqlite3.OperationalError as e:
-            if attempt == 4:
-                raise
+            if attempt == 4: raise
             time.sleep(attempt + 1)
 
 def create_player(user_id: int, username: str, name: str, race: str, class_type: str):
-    """Создание персонажа"""
     race_bonuses = {
         "human": {"skill_points": 3}, "elf": {"agility": 3},
         "dwarf": {"strength": 3}, "orc": {"vitality": 3},
@@ -122,7 +118,6 @@ def create_player(user_id: int, username: str, name: str, race: str, class_type:
             time.sleep(attempt + 1)
 
 def get_player(user_id: int) -> Optional[Dict]:
-    """Получение данных игрока"""
     for attempt in range(5):
         try:
             with get_connection() as conn:
@@ -136,6 +131,7 @@ def get_player(user_id: int) -> Optional[Dict]:
                             player[field] = json.loads(player[field] or "{}")
                         except:
                             player[field] = {}
+                    player["gold"] = int(player.get("gold", 0))
                     return player
             return None
         except sqlite3.OperationalError:
@@ -143,16 +139,11 @@ def get_player(user_id: int) -> Optional[Dict]:
             time.sleep(attempt + 1)
 
 def update_player(user_id: int, **kwargs):
-    """Обновление данных игрока — надёжная версия"""
-    if not kwargs: 
-        return True
-    
+    if not kwargs: return True
     for attempt in range(5):
         try:
             with get_connection() as conn:
                 cursor = conn.cursor()
-                
-                # Обрабатываем JSON-поля: преобразуем dict/list в JSON-строку
                 json_fields = ["equipment", "inventory", "spells", "buffs"]
                 for field in json_fields:
                     if field in kwargs:
@@ -160,39 +151,22 @@ def update_player(user_id: int, **kwargs):
                             kwargs[field] = json.dumps(kwargs[field])
                         elif kwargs[field] is None:
                             kwargs[field] = json.dumps({} if field != "spells" else [])
-                
-                # Формируем SQL-запрос
                 set_clause = ", ".join([f"{k} = ?" for k in kwargs.keys()])
                 values = list(kwargs.values()) + [user_id]
-                
                 cursor.execute(f"UPDATE players SET {set_clause} WHERE user_id = ?", values)
-                
-                # Проверяем, что строка обновилась
-                if cursor.rowcount == 0:
-                    logger.warning(f"⚠️ update_player: нет строк для user_id={user_id}")
-                
                 conn.commit()
-                
-                # Возвращаем успех
                 return True
         except sqlite3.OperationalError as e:
-            logger.error(f"❌ DB error (attempt {attempt+1}): {e}")
-            if attempt == 4:
-                raise
+            if attempt == 4: raise
             time.sleep(attempt + 1)
-    
     return False
 
 def add_gold(user_id: int, amount: int) -> bool:
-    """Надёжное добавление золота (атомарная операция)"""
     for attempt in range(5):
         try:
             with get_connection() as conn:
                 cursor = conn.cursor()
-                cursor.execute(
-                    "UPDATE players SET gold = gold + ? WHERE user_id = ?",
-                    (amount, user_id)
-                )
+                cursor.execute("UPDATE players SET gold = gold + ? WHERE user_id = ?", (amount, user_id))
                 conn.commit()
                 return cursor.rowcount > 0
         except sqlite3.OperationalError:
@@ -201,33 +175,24 @@ def add_gold(user_id: int, amount: int) -> bool:
     return False
 
 def spend_gold(user_id: int, amount: int) -> bool:
-    """Надёжное списание золота (только если достаточно)"""
     for attempt in range(5):
         try:
             with get_connection() as conn:
                 cursor = conn.cursor()
-                # Списываем только если золота достаточно
-                cursor.execute(
-                    "UPDATE players SET gold = gold - ? WHERE user_id = ? AND gold >= ?",
-                    (amount, user_id, amount)
-                )
+                cursor.execute("UPDATE players SET gold = gold - ? WHERE user_id = ? AND gold >= ?", (amount, user_id, amount))
                 conn.commit()
-                return cursor.rowcount > 0  # True если строка обновилась
+                return cursor.rowcount > 0
         except sqlite3.OperationalError:
             if attempt == 4: raise
             time.sleep(attempt + 1)
     return False
 
 def add_log(user_id: int, action: str, details: str):
-    """Добавление записи в лог"""
     for attempt in range(5):
         try:
             with get_connection() as conn:
                 cursor = conn.cursor()
-                cursor.execute(
-                    "INSERT INTO logs (user_id, action, details) VALUES (?, ?, ?)",
-                    (user_id, action, details)
-                )
+                cursor.execute("INSERT INTO logs (user_id, action, details) VALUES (?, ?, ?)", (user_id, action, details))
                 conn.commit()
             break
         except sqlite3.OperationalError:
@@ -235,15 +200,11 @@ def add_log(user_id: int, action: str, details: str):
             time.sleep(attempt + 1)
 
 def get_logs(user_id: int, limit: int = 10) -> List[Dict]:
-    """Получение логов"""
     for attempt in range(5):
         try:
             with get_connection() as conn:
                 cursor = conn.cursor()
-                cursor.execute(
-                    "SELECT * FROM logs WHERE user_id = ? ORDER BY timestamp DESC LIMIT ?",
-                    (user_id, limit)
-                )
+                cursor.execute("SELECT * FROM logs WHERE user_id = ? ORDER BY timestamp DESC LIMIT ?", (user_id, limit))
                 return [dict(row) for row in cursor.fetchall()]
         except sqlite3.OperationalError:
             if attempt == 4: raise
@@ -251,7 +212,6 @@ def get_logs(user_id: int, limit: int = 10) -> List[Dict]:
     return []
 
 def calculate_stats_from_equipment(equipment: Dict, shop_items: Dict) -> Dict:
-    """Рассчитывает бонусы от экипировки"""
     bonuses = {"strength": 0, "vitality": 0, "agility": 0, "intelligence": 0}
     for slot, item_id in equipment.items():
         for category, items in shop_items.items():
@@ -265,22 +225,17 @@ def calculate_stats_from_equipment(equipment: Dict, shop_items: Dict) -> Dict:
     return bonuses
 
 def apply_equipment_bonuses(player: Dict, shop_items: Dict) -> Dict:
-    """Применяет бонусы экипировки к статам"""
     equip_bonuses = calculate_stats_from_equipment(player.get("equipment", {}), shop_items)
-    
-    # Сохраняем базовые значения (без экипировки)
     base_str = player.get("base_strength", player["strength"] - equip_bonuses["strength"])
     base_vit = player.get("base_vitality", player["vitality"] - equip_bonuses["vitality"])
     base_agi = player.get("base_agility", player["agility"] - equip_bonuses["agility"])
     base_int = player.get("base_intelligence", player["intelligence"] - equip_bonuses["intelligence"])
     
-    # Применяем бонусы
     player["strength"] = base_str + equip_bonuses["strength"]
     player["vitality"] = base_vit + equip_bonuses["vitality"]
     player["agility"] = base_agi + equip_bonuses["agility"]
     player["intelligence"] = base_int + equip_bonuses["intelligence"]
     
-    # Пересчитываем боевые характеристики
     player["phys_atk"] = 5 + player["strength"] * 4
     player["stealth_atk"] = 10 + player["agility"] * 11
     player["evasion"] = 8 + player["agility"] * 3
@@ -292,5 +247,4 @@ def apply_equipment_bonuses(player: Dict, shop_items: Dict) -> Dict:
     
     return player
 
-# Инициализация БД при импорте
 init_db()
