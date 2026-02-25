@@ -1,10 +1,11 @@
 """
 📁 database.py - Работа с базой данных SQLite
-✅ Содержит все необходимые функции для бота
+✅ ИСПРАВЛЕНО: добавлен import json
 """
 
 import sqlite3
 import os
+import json  # ✅ ДОБАВЛЕНО: без этого не работает парсинг JSON-полей!
 from typing import Optional, Dict, List, Any
 
 # Путь к базе данных
@@ -96,7 +97,7 @@ def get_player(user_id: int) -> Optional[Dict[str, Any]]:
             if row:
                 # Преобразуем Row в dict и парсим JSON-поля
                 player = dict(row)
-                player["inventory"] = json.loads(player["inventory"] or "{}")
+                player["inventory"] = json.loads(player["inventory"] or "{}")  # ✅ json должен быть импортирован!
                 player["equipment"] = json.loads(player["equipment"] or "{}")
                 player["spells"] = json.loads(player["spells"] or "[]")
                 return player
@@ -113,7 +114,7 @@ def update_player(user_id: int, **kwargs) -> bool:
             # Парсим JSON-поля если они передаются
             for key in ["inventory", "equipment", "spells"]:
                 if key in kwargs and isinstance(kwargs[key], (dict, list)):
-                    kwargs[key] = json.dumps(kwargs[key])
+                    kwargs[key] = json.dumps(kwargs[key])  # ✅ json должен быть импортирован!
             
             set_clause = ", ".join([f"{k} = ?" for k in kwargs.keys()])
             values = list(kwargs.values()) + [user_id]
@@ -211,7 +212,7 @@ def recalc_all_stats(player: Dict[str, Any], shop_items: Dict[str, List]) -> Dic
     Returns:
         dict: Словарь с пересчитанными характеристиками (БЕЗ skill_points)
     """
-    # Базовые значения от расы/класса (можно расширить)
+    # Базовые значения от расы/класса
     base = {
         "phys_atk": 20, "stealth_atk": 40, "evasion": 15,
         "phys_def": 5, "magic_def": 5, "magic_atk": 20,
@@ -235,7 +236,6 @@ def recalc_all_stats(player: Dict[str, Any], shop_items: Dict[str, List]) -> Dic
     equipment = player.get("equipment", {})
     
     for slot, item_id in equipment.items():
-        # Ищем предмет в shop_items
         for category_items in shop_items.values():
             for item in category_items:
                 if item["id"] == item_id and item.get("stat"):
@@ -262,8 +262,7 @@ def recalc_all_stats(player: Dict[str, Any], shop_items: Dict[str, List]) -> Dic
         "magic_atk": final_intelligence * 4,
     }
     
-    # Собираем итоговый словарь
-    # ✅ skill_points НЕ включаем — он сохраняется отдельно!
+    # Собираем итоговый словарь БЕЗ skill_points
     return {
         "phys_atk": base["phys_atk"] + skill_bonuses["phys_atk"] + final_bonuses["phys_atk"],
         "stealth_atk": base["stealth_atk"] + skill_bonuses["stealth_atk"] + final_bonuses["stealth_atk"],
@@ -273,7 +272,6 @@ def recalc_all_stats(player: Dict[str, Any], shop_items: Dict[str, List]) -> Dic
         "magic_atk": base["magic_atk"] + skill_bonuses["magic_atk"] + final_bonuses["magic_atk"],
         "max_hp": base["max_hp"] + skill_bonuses["max_hp"] + final_bonuses["max_hp"],
         "max_mp": base["max_mp"] + skill_bonuses["max_mp"] + final_bonuses["max_mp"],
-        # ✅ hp и mp обновляем только если они меньше новых max
         "hp": min(player["hp"], base["max_hp"] + skill_bonuses["max_hp"] + final_bonuses["max_hp"]),
         "mp": min(player["mp"], base["max_mp"] + skill_bonuses["max_mp"] + final_bonuses["max_mp"]),
         # ✅ skill_points НЕ возвращаем — он не должен перезаписываться!
