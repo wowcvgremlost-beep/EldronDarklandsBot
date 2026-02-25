@@ -47,6 +47,7 @@ logger = logging.getLogger(__name__)
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
+
 # ==================== МАШИНЫ СОСТОЯНИЙ ====================
 
 class CharacterCreation(StatesGroup):
@@ -96,7 +97,8 @@ RACES = {
     },
     "orc": {
         "name": "👹 Орк",
-        "bonus": "+3 Живучесть",        "magic": "🔥 Ярость: +10% урона при HP<50%"
+        "bonus": "+3 Живучесть",
+        "magic": "🔥 Ярость: +10% урона при HP<50%"
     },
     "fallen": {
         "name": "💀 Падший",
@@ -145,7 +147,8 @@ RACE_MAGIC = {
         "name": RACES[r]["magic"].split(":")[0].strip(),
         "description": RACES[r]["magic"].split(":")[1].strip() if ":" in RACES[r]["magic"] else "",
         "type": "passive"
-    }    for r in RACES
+    }
+    for r in RACES
 }
 
 # ⚡ МАГИЯ КЛАССОВ (активные способности)
@@ -194,7 +197,8 @@ CLASS_MAGIC = {
     }
 }
 
-# 🏪 ПРЕДМЕТЫ МАГАЗИНА# Формат предмета:
+# 🏪 ПРЕДМЕТЫ МАГАЗИНА
+# Формат предмета:
 # - id: уникальный идентификатор
 # - name: отображаемое название с эмодзи
 # - effect: описание эффекта
@@ -243,7 +247,8 @@ SHOP_ITEMS = {
 # Формат монстра:
 # - name: имя монстра
 # - hp/max_hp: здоровье
-# - phys_atk/phys_def: физическая атака/защита# - evasion: уклонение (для инициативы)
+# - phys_atk/phys_def: физическая атака/защита
+# - evasion: уклонение (для инициативы)
 # - exp/gold: награда за победу
 # - skill/skill_effect/skill_chance: уникальный навык монстра
 
@@ -292,7 +297,8 @@ CARDS = {
 def main_menu_kb():
     """
     Создаёт клавиатуру главного меню.
-        Returns:
+    
+    Returns:
         InlineKeyboardMarkup: Клавиатура с кнопками меню
     """
     return InlineKeyboardMarkup(inline_keyboard=[
@@ -341,7 +347,8 @@ def skills_kb():
     """
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="💪 +1 Сила = ⚔️+4", callback_data="skill_strength")],
-        [InlineKeyboardButton(text="⚡ +1 Ловк = ⚡+8 🛡️+3", callback_data="skill_agility")],        [InlineKeyboardButton(text="❤️ +1 Жив = ❤️+10 🛡️+1", callback_data="skill_vitality")],
+        [InlineKeyboardButton(text="⚡ +1 Ловк = ⚡+8 🛡️+3", callback_data="skill_agility")],
+        [InlineKeyboardButton(text="❤️ +1 Жив = ❤️+10 🛡️+1", callback_data="skill_vitality")],
         [InlineKeyboardButton(text="🧠 +1 Инт = 💙+3 🔮+4", callback_data="skill_intelligence")],
         [InlineKeyboardButton(text="🔙 Назад", callback_data="main_menu")],
     ])
@@ -390,7 +397,8 @@ def battle_menu_kb():
     """
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="👹 vs Монстр", callback_data="battle_pve")],
-        [InlineKeyboardButton(text="🔙 Назад", callback_data="main_menu")],    ])
+        [InlineKeyboardButton(text="🔙 Назад", callback_data="main_menu")],
+    ])
 
 
 def pve_monsters_kb():
@@ -438,6 +446,7 @@ def magic_levels_kb():
         [InlineKeyboardButton(text="📊 Уровень 15", callback_data="magic_15")],
         [InlineKeyboardButton(text="🔙 Назад", callback_data="magic_tower")],
     ])
+
 
 def battle_action_kb():
     """
@@ -488,7 +497,8 @@ async def cmd_gold(message: types.Message):
     """
     Админ-команда для управления золотом.
     
-    Форматы:        /gold me <сумма> - добавить золото себе
+    Форматы:
+        /gold me <сумма> - добавить золото себе
         /gold set <id> <сумма> - установить золото игроку
         /gold add <id> <сумма> - добавить золото игроку
         /gold all <сумма> - установить золото всем
@@ -537,7 +547,8 @@ async def cmd_reset(message: types.Message):
     Удаляет игрока и его логи из базы данных.
     
     Args:
-        message: Сообщение с командой /reset <user_id>    """
+        message: Сообщение с командой /reset <user_id>
+    """
     if message.from_user.id not in ADMIN_IDS:
         await message.answer("🔒 Только для админа!")
         return
@@ -587,6 +598,7 @@ async def cmd_start(message: types.Message, state: FSMContext):
         )
         await state.set_state(CharacterCreation.name)
 
+
 @dp.message(CharacterCreation.name)
 async def set_name(message: types.Message, state: FSMContext):
     """
@@ -635,7 +647,8 @@ async def set_class(callback: types.CallbackQuery, state: FSMContext):
         callback: CallbackQuery с выбором класса
         state: FSMContext
     """
-    data = await state.get_data()    class_type = callback.data.split("_")[1]
+    data = await state.get_data()
+    class_type = callback.data.split("_")[1]
     
     # Создаём персонажа в БД
     db.create_player(
@@ -684,7 +697,8 @@ async def show_character(callback: types.CallbackQuery):
         "armor_1": "⛑️ Шлем", "armor_2": "🛡️ Броня", "armor_3": "👖 Штаны",
         "armor_4": "👢 Ботинки", "armor_5": "💪 Руки", "armor_6": "🧤 Перчатки",
         "accessory_1": "📿 Амулет", "accessory_2": "💍 Кольцо", "accessory_3": "⛓️ Цепь"
-    }    
+    }
+    
     if player["equipment"]:
         for slot, item_id in player["equipment"].items():
             item_name = next((i["name"] for cat in SHOP_ITEMS.values() for i in cat if i["id"] == item_id), item_id)
@@ -735,6 +749,7 @@ async def show_skills(callback: types.CallbackQuery):
     
     await edit_safe(callback.message, text=text, reply_markup=skills_kb(), parse_mode="HTML")
 
+
 @dp.callback_query(F.data.startswith("skill_"))
 async def upgrade_skill(callback: types.CallbackQuery):
     """
@@ -782,7 +797,8 @@ async def upgrade_skill(callback: types.CallbackQuery):
             "intelligence": player["intelligence"]+1,
             "max_mp": player["max_mp"]+3,
             "mp": player["mp"]+3,
-            "magic_atk": player["magic_atk"]+4        })
+            "magic_atk": player["magic_atk"]+4
+        })
         msg = "🧠 Интеллект +1 → 💙+3 🔮+4"
     
     db.update_player(callback.from_user.id, **updates)
@@ -830,6 +846,7 @@ async def show_inventory(callback: types.CallbackQuery):
 async def battle_menu(callback: types.CallbackQuery):
     """Показывает меню выбора типа боя."""
     await edit_safe(callback.message, text="⚔️ Бой", reply_markup=battle_menu_kb(), parse_mode="HTML")
+
 
 @dp.callback_query(F.data == "battle_pve")
 async def select_monster(callback: types.CallbackQuery):
@@ -880,7 +897,8 @@ async def start_pve_battle(callback: types.CallbackQuery, state: FSMContext):
     # Показываем начало боя
     text = (f"⚔️ <b>НАЧАЛО БОЯ!</b>\n\n"
             f"👤 {player['name']} ❤️{player['hp']}/{player['max_hp']} 💙{player['mp']}/{player['max_mp']}\n"
-            f"🆚\n"            f"👹 {monster['name']} ❤️{monster['hp']}/{monster['max_hp']}\n"
+            f"🆚\n"
+            f"👹 {monster['name']} ❤️{monster['hp']}/{monster['max_hp']}\n"
             f"✨ Навык: {monster.get('skill', 'Нет')} ({monster.get('skill_chance', 0)}%)\n\n"
             f"<i>Кинь кубик d20 и напиши число (1-20):</i>")
     
@@ -929,7 +947,8 @@ async def player_dice_roll(message: types.Message, state: FSMContext):
     enemy_init = battle["enemy"]["evasion"] + enemy_dice
     first = "player" if player_init >= enemy_init else "enemy"
     
-    text = (f"🎲 <b>Результаты броска:</b>\n"            f"👤 Ты: {battle.get('player_stats', {}).get('stealth_atk', 50)} + {dice} = {player_init}\n"
+    text = (f"🎲 <b>Результаты броска:</b>\n"
+            f"👤 Ты: {battle.get('player_stats', {}).get('stealth_atk', 50)} + {dice} = {player_init}\n"
             f"👹 Враг: {battle['enemy']['evasion']} + {enemy_dice} = {enemy_init}\n\n"
             f"{'✅ Ты ходишь первым!' if first == 'player' else '⚠️ Враг ходит первым!'}\n\n"
             f"<i>Выбери действие:</i>")
@@ -978,7 +997,8 @@ async def battle_action(callback: types.CallbackQuery, state: FSMContext):
     enemy_hp = battle["enemy_hp"]
     
     # 🏳️ СДАТЬСЯ
-    if action == "surrender":        db.update_player(callback.from_user.id, gold=0)
+    if action == "surrender":
+        db.update_player(callback.from_user.id, gold=0)
         await callback.message.edit_text(
             "🏳️ Ты сдался.\n💰 Золото потеряно.\n❤️ HP не восстановлены.",
             reply_markup=main_menu_kb(),
@@ -1027,7 +1047,8 @@ async def battle_action(callback: types.CallbackQuery, state: FSMContext):
             return
         
         # Ход монстра
-        enemy_dmg = max(1, enemy["phys_atk"] - player["phys_def"] + random.randint(1, 20))        new_hp = max(0, player["hp"] - enemy_dmg)
+        enemy_dmg = max(1, enemy["phys_atk"] - player["phys_def"] + random.randint(1, 20))
+        new_hp = max(0, player["hp"] - enemy_dmg)
         
         # Проверка навыка монстра
         skill_used = ""
@@ -1076,7 +1097,8 @@ async def battle_action(callback: types.CallbackQuery, state: FSMContext):
         await state.set_state(BattleState.player_dice)
         return
     
-    # 🔮 МАГИЧЕСКАЯ АТАКА    if action == "magic":
+    # 🔮 МАГИЧЕСКАЯ АТАКА
+    if action == "magic":
         if player["mp"] < 5:
             await callback.answer("❌ Недостаточно MP!", show_alert=True)
             return
@@ -1125,7 +1147,8 @@ async def show_inventory_category(callback: types.CallbackQuery):
     cat_map = {
         "inv_potions": "potions",
         "inv_weapons": "weapons",
-        "inv_armor": "armor",        "inv_accessories": "accessories",
+        "inv_armor": "armor",
+        "inv_accessories": "accessories",
         "inv_other": "other"
     }
     category = cat_map.get(callback.data, "potions")
@@ -1174,7 +1197,8 @@ async def item_action_menu(callback: types.CallbackQuery):
     if not player:
         await callback.answer("❌ Ошибка!", show_alert=True)
         return
-        item_id = callback.data.split("_", 2)[2]
+    
+    item_id = callback.data.split("_", 2)[2]
     item = next((i for cat in SHOP_ITEMS.values() for i in cat if i["id"] == item_id), None)
     if not item:
         await callback.answer("❌ Предмет не найден!", show_alert=True)
@@ -1223,7 +1247,8 @@ async def item_action_menu(callback: types.CallbackQuery):
 
 @dp.callback_query(F.data.startswith("use_"))
 async def use_item(callback: types.CallbackQuery):
-    """    Применяет расходный предмет (зелье/свиток).
+    """
+    Применяет расходный предмет (зелье/свиток).
     
     ✅ ИСПРАВЛЕНО:
     - Уровень повышается корректно с +1 очком навыка
@@ -1272,7 +1297,8 @@ async def use_item(callback: types.CallbackQuery):
             await callback.answer("⚠️ MP уже полностью восстановлено!", show_alert=True)
             return
         updates["mp"] = new_mp
-        msg = f"💙 +{item['value']} MP"    
+        msg = f"💙 +{item['value']} MP"
+    
     # 📜 СВИТОК ОПЫТА
     elif item["stat"] == "exp":
         new_exp = player["exp"] + item["value"]
@@ -1321,7 +1347,8 @@ async def equip_item(callback: types.CallbackQuery):
     """
     player = db.get_player(callback.from_user.id)
     if not player:
-        await callback.answer("❌ Создай персонажа!", show_alert=True)        return
+        await callback.answer("❌ Создай персонажа!", show_alert=True)
+        return
     
     item_id = callback.data.split("_", 1)[1]
     if item_id not in player["inventory"] or player["inventory"][item_id] < 1:
@@ -1370,7 +1397,8 @@ async def unequip_item(callback: types.CallbackQuery):
         await callback.answer("❌ Создай персонажа!", show_alert=True)
         return
     
-    item_id = callback.data.split("_", 1)[1]    equipment = player.get("equipment", {})
+    item_id = callback.data.split("_", 1)[1]
+    equipment = player.get("equipment", {})
     
     # Находим слот, в котором экипирован предмет
     slot_to_remove = None
@@ -1419,7 +1447,8 @@ async def unequip_all_category(callback: types.CallbackQuery):
         await callback.answer("❌ Создай персонажа!", show_alert=True)
         return
     
-    # ✅ Правильный парсинг: unequip_all_weapons → category = "weapons"    parts = callback.data.split("_")
+    # ✅ Правильный парсинг: unequip_all_weapons → category = "weapons"
+    parts = callback.data.split("_")
     if len(parts) < 3:
         await callback.answer("❌ Ошибка!", show_alert=True)
         return
@@ -1468,7 +1497,8 @@ async def unequip_all_category(callback: types.CallbackQuery):
     await show_inventory_category(callback)
 
 
-@dp.callback_query(F.data.startswith("sell_"))async def sell_item(callback: types.CallbackQuery):
+@dp.callback_query(F.data.startswith("sell_"))
+async def sell_item(callback: types.CallbackQuery):
     """
     Продаёт предмет за половину цены.
     
@@ -1517,7 +1547,8 @@ async def unequip_all_category(callback: types.CallbackQuery):
     
     db.update_player(callback.from_user.id, inventory=inv, gold=player["gold"] + price)
     
-    # ✅ Пересчитываем ВСЕ статы после изменения инвентаря/экипировки    updated_player = db.get_player(callback.from_user.id)
+    # ✅ Пересчитываем ВСЕ статы после изменения инвентаря/экипировки
+    updated_player = db.get_player(callback.from_user.id)
     new_stats = db.recalc_all_stats(updated_player, SHOP_ITEMS)
     db.update_player(callback.from_user.id, **{
         k: new_stats[k] for k in [
@@ -1566,7 +1597,8 @@ async def show_shop_category(callback: types.CallbackQuery):
 
 @dp.callback_query(F.data.startswith("buy_"))
 async def buy_item(callback: types.CallbackQuery):
-    """    Покупает предмет, если достаточно золота.
+    """
+    Покупает предмет, если достаточно золота.
     
     ✅ ИСПРАВЛЕНО: остаётся в той же категории после покупки
     
@@ -1615,7 +1647,8 @@ async def show_shop_category_by_name(callback: types.CallbackQuery, category: st
     Вспомогательная функция для показа категории магазина по имени.
     
     Args:
-        callback: CallbackQuery        category: Название категории (potions/weapons и т.д.)
+        callback: CallbackQuery
+        category: Название категории (potions/weapons и т.д.)
     """
     items = SHOP_ITEMS.get(category, [])
     kb = [[InlineKeyboardButton(text=f"{item['name']} {item['effect']} 💰{item['price']}", callback_data=f"buy_{category}_{item['id']}")] for item in items]
@@ -1664,7 +1697,8 @@ async def show_logs(callback: types.CallbackQuery):
     
     Args:
         callback: CallbackQuery
-    """    logs = db.get_logs(callback.from_user.id)
+    """
+    logs = db.get_logs(callback.from_user.id)
     text = "📜 Лог\n\n" + ("\n".join([f"• {l['action']}: {l['details']}" for l in logs[:10]]) if logs else "• Пусто")
     await edit_safe(callback.message, text=text, reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🔙 Назад", callback_data="main_menu")]]), parse_mode="HTML")
 
@@ -1713,7 +1747,8 @@ async def learn_spell(callback: types.CallbackQuery):
     Покупает и изучает заклинание.
     
     Args:
-        callback: CallbackQuery с ID заклинания    """
+        callback: CallbackQuery с ID заклинания
+    """
     parts = callback.data.split("_", 2)
     level, spell_id = int(parts[1]), parts[2]
     player = db.get_player(callback.from_user.id)
@@ -1762,7 +1797,8 @@ async def on_startup(app):
     """
     Инициализация при запуске бота.
     
-    Устанавливает webhook для получения обновлений.    """
+    Устанавливает webhook для получения обновлений.
+    """
     url = os.getenv("RAILWAY_PUBLIC_DOMAIN") or os.getenv("RENDER_EXTERNAL_URL")
     if url:
         url = url.replace("http://", "https://").rstrip("/")
@@ -1811,7 +1847,8 @@ def create_app():
 
 def main():
     """Точка входа для запуска бота."""
-    app = create_app()    setup_application(app, dp, bot=bot)
+    app = create_app()
+    setup_application(app, dp, bot=bot)
     web.run_app(app, host="0.0.0.0", port=int(os.getenv("PORT", 8080)))
 
 
